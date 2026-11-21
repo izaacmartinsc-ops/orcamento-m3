@@ -2,7 +2,7 @@
 
 ## O que é
 App web (PWA) que substitui as planilhas "CÁLCULO DE PERDA DE CARGA.xls" e "Proposta Bomba Solar - Atualizada.xlsm".
-O vendedor escolhe o tipo de bomba, digita água/dia, desnível, nível dinâmico, comprimento do cano, cano e km;
+O vendedor preenche só L (comprimento, m), Q (vazão, m³/h), D (diâmetro interno, mm) e Dn (desnível, m), além do cliente e km (pedido do Izaac em 21/11);
 o app calcula a perda de carga e a AMT, lista os kits que atendem e gera o PDF da proposta.
 Funciona sem internet depois de aberto uma vez com internet.
 
@@ -15,16 +15,15 @@ Funciona sem internet depois de aberto uma vez com internet.
 - header.jpg, foto.jpg — imagens da proposta (mesmas da planilha)
 
 ## Regras de cálculo (iguais à planilha)
-- Vazão (m³/h) = água por dia ÷ horas de sol ÷ 1000
 - Velocidade = 354 × Q / D² (D em mm); limite 2,5009 m/s
 - Perda de carga (Hazen-Williams, C=140) = 10,643 / (D/1000)^4,87 × ((Q/3600)/140)^1,852 × L
-- AMT = perda + desnível + nível dinâmico (só caneta) + perdas localizadas
-- Kit "atende" se: mesmo tipo, MCA máx ≥ AMT × (1+folga) e vazão/dia ≥ água/dia
+- AMT = perda + Dn + perdas localizadas (5 mca) — igual à aba "Bomba Centrífuga" da planilha
+- Kit "atende" se: MCA máx ≥ AMT × (1+folga) e vazão/h (MCA=0) ≥ Q × 1000. O tipo (caneta/superfície) vem do kit escolhido
 - Valores: produto + módulos×950 + estrutura×módulos + kit montagem (caneta ou superfície) + instalação (125×módulos) + km×2,50; à vista = total × 0,95
 - Limitação: a tabela só tem vazão com altura zero (sem curva da bomba); a indicação de kit é um filtro inicial
 
 ## Testado
-Exemplo: caneta, 15.000 L/dia, desnível 20 m, nível dinâmico 30 m, 200 m de tubo agropecuário 1" (29 mm), 100 km,
+Exemplo: L 200 m, Q 3 m³/h, D 29 mm, Dn 50 m, 100 km,
 kit "CANETA AT -1.500W- 2 CV- 4 PLACAS" → AMT 68,8 mca, total R$ 9.450,00 (4x), R$ 8.977,50 à vista. Igual à planilha.
 Testado com internet desligada: abre, calcula, salva proposta e baixa PDF.
 

@@ -122,21 +122,16 @@ td.r,th.r{text-align:right}
       </div>
     </section>
 
-    <section class="step"><h2><i>2</i>Água e instalação</h2>
+    <section class="step"><h2><i>2</i>Dados técnicos</h2>
       <div class="body">
-        <div class="seg" id="tipo">
-          <button type="button" id="tipo-caneta" data-tipo="CANETA" aria-pressed="true"><b>Caneta (submersa)</b><small>Poço ou cisterna</small></button>
-          <button type="button" id="tipo-sup" data-tipo="SUPERFÍCIE" aria-pressed="false"><b>Superfície</b><small>Rio, represa, cisterna rasa</small></button>
-        </div>
         <div class="grid">
-          <label class="f">Água necessária por dia<span class="unit"><input id="agua" type="number" min="0" step="500" inputmode="numeric"><em>litros</em></span></label>
-          <label class="f">Desnível <small>da água até a caixa d'água</small><span class="unit"><input id="desnivel" type="number" min="0" inputmode="decimal"><em>m</em></span></label>
-          <label class="f" id="wrap-nd">Nível dinâmico do poço<span class="unit"><input id="nd" type="number" min="0" inputmode="decimal"><em>m</em></span></label>
-          <label class="f">Comprimento do cano <small>da bomba até a caixa</small><span class="unit"><input id="comp" type="number" min="0" inputmode="decimal"><em>m</em></span></label>
-          <label class="f">Cano<select id="cano"></select></label>
-          <label class="f" id="wrap-dman" hidden>Diâmetro interno<span class="unit"><input id="dman" type="number" min="0" step="0.1" inputmode="decimal"><em>mm</em></span></label>
+          <label class="f">L = Comprimento da tubulação<span class="unit"><input id="comp" type="number" min="0" inputmode="decimal"><em>m</em></span></label>
+          <label class="f">Q = Vazão<span class="unit"><input id="q" type="number" min="0" step="0.1" inputmode="decimal"><em>m³/h</em></span></label>
+          <label class="f">D = Diâmetro interno <small>digite ou escolha na lista</small><span class="unit"><input id="diam" type="number" min="0" step="0.1" inputmode="decimal" list="lista-diam"><em>mm</em></span></label>
+          <label class="f">Dn = Desnível<span class="unit"><input id="desnivel" type="number" min="0" inputmode="decimal"><em>m</em></span></label>
           <label class="f">Distância até o cliente<span class="unit"><input id="km" type="number" min="0" inputmode="numeric"><em>km</em></span></label>
         </div>
+        <datalist id="lista-diam"></datalist>
       </div>
     </section>
 
@@ -253,38 +248,31 @@ const GARANTIA=[
 let produtos=[], cfg=null, propostas=[], precosLocais=false;
 const LS={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}}};
 propostas=LS.get('m3-propostas',[]);
-const st={tipo:'CANETA', kit:null, verTodos:false, inst:true, estr:true, kitm:true, editId:null};
+const st={kit:null, verTodos:false, inst:true, estr:true, kitm:true, editId:null};
 
-// ---------- cano select
-const sel=$('cano');
-TUBOS.forEach((t,i)=>{const o=document.createElement('option');o.value=i;o.textContent=`${t[0]} - DN ${t[1]} (${fmt(t[2],1)} mm)`;sel.appendChild(o)});
-const oM=document.createElement('option');oM.value='man';oM.textContent='Outro: digitar diâmetro interno';sel.appendChild(oM);
-sel.value='1';
+// ---------- lista de diâmetros (tabela da planilha)
+const dl=$('lista-diam');
+TUBOS.forEach(t=>{const o=document.createElement('option');o.value=t[2];o.label=`${t[0]} - DN ${t[1]}`;o.textContent=`${t[0]} - DN ${t[1]}`;dl.appendChild(o)});
+const tipoKit=()=>{const p=produtos.find(x=>x.id===st.kit);return p?p.tipo:''};
 
 // ---------- exemplo inicial
-const EXEMPLO={nome:'',agua:15000,desnivel:20,nd:30,comp:200,cano:'1',km:50};
-function preencheExemplo(){
-  $('agua').value=EXEMPLO.agua;$('desnivel').value=EXEMPLO.desnivel;$('nd').value=EXEMPLO.nd;$('comp').value=EXEMPLO.comp;$('km').value=EXEMPLO.km;
-}
+const EXEMPLO={comp:200,q:3,diam:29,desnivel:50,km:50};
+function preencheExemplo(){Object.entries(EXEMPLO).forEach(([k,v])=>$(k).value=v)}
 preencheExemplo();
 try{const v=localStorage.getItem('m3-vendedor');if(v)$('vendedor').value=v}catch(e){}
 
 // ---------- cálculo (mesmas fórmulas da planilha)
 function calcula(){
   const c=cfg||{};
-  const horas=num(c.horasSol)||5;
-  const agua=num($('agua').value), L=num($('comp').value), dn=num($('desnivel').value);
-  const nd=st.tipo==='CANETA'?num($('nd').value):0;
-  const D=sel.value==='man'?num($('dman').value):TUBOS[+sel.value][2];
-  const Q=agua/horas/1000; // m³/h
+  const L=num($('comp').value), Q=num($('q').value), D=num($('diam').value), dn=num($('desnivel').value);
   const V=D>0?354*Q/(D*D):0;
   const perda=(D>0&&Q>0)?10.643/Math.pow(D/1000,4.87)*Math.pow((Q/3600)/140,1.852)*L:0;
   const perdasLoc=c.perdasLocalizadas!=null?num(c.perdasLocalizadas):5;
-  const pronto=agua>0&&L>0&&D>0;
-  const amt=pronto?perda+dn+nd+perdasLoc:0;
-  return {agua,L,dn,nd,D,Q,V,perda,amt,pronto,horas,perdasLoc,minMca:amt*(1+num(c.folga))};
+  const pronto=Q>0&&L>0&&D>0;
+  const amt=pronto?perda+dn+perdasLoc:0;
+  return {L,dn,D,Q,V,perda,amt,pronto,perdasLoc,minMca:amt*(1+num(c.folga))};
 }
-function atende(p,r){return r.pronto&&p.tipo===st.tipo&&num(p.mcaMax)>=r.minMca&&num(p.vazaoDia)>=r.agua}
+function atende(p,r){return r.pronto&&num(p.mcaMax)>=r.minMca&&num(p.vazaoH)>=r.Q*1000}
 
 function valores(r){
   const c=cfg||{}; const p=produtos.find(x=>x.id===st.kit); if(!p)return null;
@@ -295,8 +283,8 @@ function valores(r){
     {n:p.nome,q:qtd,u:unit,s:num(p.preco)*qtd+num(c.adicionalBomba),produto:true},
     {n:'Módulos 550W',q:mods,u:num(c.modulo)},
     {n:'Estrutura por módulo',q:st.estr?mods:0,u:num(c.estrutura)},
-    {n:'Kit inst. bomba superfície',q:(st.kitm&&st.tipo==='SUPERFÍCIE')?1:0,u:num(c.kitSup)},
-    {n:'Kit inst. bomba caneta',q:(st.kitm&&st.tipo==='CANETA')?1:0,u:num(c.kitCaneta)},
+    {n:'Kit inst. bomba superfície',q:(st.kitm&&p.tipo==='SUPERFÍCIE')?1:0,u:num(c.kitSup)},
+    {n:'Kit inst. bomba caneta',q:(st.kitm&&p.tipo==='CANETA')?1:0,u:num(c.kitCaneta)},
     {n:'Instalação da bomba',q:st.inst?1:0,u:num(c.instalacao)*mods},
     {n:'Deslocamento (km)',q:num($('km').value),u:num(c.km)}
   ];
@@ -308,31 +296,29 @@ function valores(r){
 
 // ---------- render
 function render(){
-  $('wrap-nd').hidden=st.tipo!=='CANETA';
-  $('wrap-dman').hidden=sel.value!=='man';
   const r=calcula();
   $('r-amt').textContent=r.pronto?fmt(r.amt,1)+' mca':'–';
-  $('r-vazao').textContent=r.agua>0?fmt(r.agua/r.horas)+' L/h':'–';
+  $('r-vazao').textContent=r.Q>0?fmt(r.Q,2)+' m³/h':'–';
   $('r-perda').textContent=r.pronto?fmt(r.perda,2)+' mca':'–';
   $('r-vel').textContent=r.pronto?fmt(r.V,2)+' m/s':'–';
   const vm=$('r-velmsg');
-  if(!r.pronto){vm.innerHTML='<span class="pill warn">Preencha água por dia, comprimento e cano</span>'}
+  if(!r.pronto){vm.innerHTML='<span class="pill warn">Preencha L, Q e D</span>'}
   else if(r.V<=2.5009){vm.innerHTML='<span class="pill ok">Velocidade dentro do limite (2,5 m/s)</span>'}
   else{vm.innerHTML='<span class="pill warn">Velocidade acima do limite: use um cano mais grosso</span>'}
-  $('r-explica').textContent=r.pronto?`AMT = perda no cano ${fmt(r.perda,2)} + desnível ${fmt(r.dn,1)}${st.tipo==='CANETA'?' + nível dinâmico '+fmt(r.nd,1):''} + perdas localizadas ${fmt(r.perdasLoc,0)} mca. Vazão = água por dia ÷ ${fmt(r.horas)} h de sol. Kits indicados têm MCA máx de pelo menos ${fmt(r.minMca,1)} mca (AMT + ${fmt(num(cfg&&cfg.folga)*100)}% de folga).`:'';
+  $('r-explica').textContent=r.pronto?`AMT = perda de carga ${fmt(r.perda,2)} + desnível ${fmt(r.dn,1)} + perdas localizadas ${fmt(r.perdasLoc,0)} mca. Kits indicados têm MCA máx de pelo menos ${fmt(r.minMca,1)} mca (AMT + ${fmt(num(cfg&&cfg.folga)*100)}% de folga) e vazão máxima de pelo menos ${fmt(r.Q*1000)} L/h.`:'';
 
   // kits
   const box=$('kits'); box.textContent='';
-  const lista=produtos.filter(p=>p.tipo===st.tipo).map(p=>({p,ok:atende(p,r)}))
+  const lista=produtos.map(p=>({p,ok:atende(p,r)}))
     .filter(x=>x.ok||st.verTodos||x.p.id===st.kit).sort((a,b)=>(b.ok-a.ok)||(num(a.p.preco)-num(b.p.preco)));
   if(!produtos.length){box.innerHTML='<p class="note">Os kits aparecem aqui assim que os preços carregarem.</p>'}
-  else if(!lista.length){box.innerHTML=`<p class="note">${r.pronto?'Nenhum kit da tabela atende esta altura e esta água. Marque "Mostrar também os que não atendem" ou consulte o fornecedor.':'Preencha a parte 2 para ver os kits indicados.'}</p>`}
+  else if(!lista.length){box.innerHTML=`<p class="note">${r.pronto?'Nenhum kit da tabela atende esta altura e esta vazão. Marque "Mostrar também os que não atendem" ou consulte o fornecedor.':'Preencha a parte 2 para ver os kits indicados.'}</p>`}
   lista.forEach(({p,ok})=>{
     const b=document.createElement('button');b.type='button';b.className='kit'+(ok?'':' off');
     b.setAttribute('aria-pressed',String(p.id===st.kit));
     b.innerHTML=`<span class="n"></span><span class="m"></span><span class="p">${brl(p.preco)}</span><span>${ok?'<span class="pill ok">Atende</span>':'<span class="pill warn">Não atende</span>'}</span>`;
     b.querySelector('.n').textContent=p.nome;
-    b.querySelector('.m').textContent=`${p.marca||''} ${p.modelo||''} · MCA máx ${fmt(p.mcaMax)} · ${fmt(p.vazaoDia)} L/dia (altura zero) · ${p.modulos} placa(s)`;
+    b.querySelector('.m').textContent=`${p.tipo==='CANETA'?'Caneta':'Superfície'} · ${p.marca||''} ${p.modelo||''} · MCA máx ${fmt(p.mcaMax)} · ${fmt(p.vazaoH)} L/h (altura zero) · ${p.modulos} placa(s)`;
     b.onclick=()=>{st.kit=p.id;render()};
     box.appendChild(b);
   });
@@ -351,8 +337,7 @@ function render(){
 }
 
 // ---------- eventos
-document.querySelectorAll('#tipo button').forEach(b=>b.onclick=()=>{st.tipo=b.dataset.tipo;document.querySelectorAll('#tipo button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));const p=produtos.find(x=>x.id===st.kit);if(p&&p.tipo!==st.tipo)st.kit=null;render()});
-['agua','desnivel','nd','comp','dman','km','qtd','cano'].forEach(id=>$(id).addEventListener('input',render));
+['comp','q','diam','desnivel','km','qtd'].forEach(id=>$(id).addEventListener('input',render));
 const tog=(id,k)=>$(id).onclick=()=>{st[k]=!st[k];$(id).setAttribute('aria-pressed',String(st[k]));render()};
 tog('op-inst','inst');tog('op-estr','estr');tog('op-kit','kitm');tog('ver-todos','verTodos');
 $('vendedor').onchange=()=>{try{localStorage.setItem('m3-vendedor',$('vendedor').value)}catch(e){}};
@@ -362,14 +347,14 @@ document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>{
   document.querySelector('.bar').hidden=b.dataset.view!=='orc';
 });
 $('btn-novo').onclick=()=>{
-  ['cli-nome','cli-cpf','cli-end','agua','desnivel','nd','comp','km','dman'].forEach(id=>$(id).value='');
-  $('cli-cid').value='MG';$('qtd').value=1;sel.value='1';st.kit=null;st.editId=null;$('msg').textContent='Formulário limpo.';render();
+  ['cli-nome','cli-cpf','cli-end','comp','q','diam','desnivel','km'].forEach(id=>$(id).value='');
+  $('cli-cid').value='MG';$('qtd').value=1;st.kit=null;st.editId=null;$('msg').textContent='Formulário limpo.';render();
 };
 
 function dadosProposta(){
   const r=calcula(), v=valores(r);
   return {cliente:$('cli-nome').value.trim(),cpf:$('cli-cpf').value.trim(),endereco:$('cli-end').value.trim(),cidade:$('cli-cid').value.trim(),
-    vendedor:$('vendedor').value,tipo:st.tipo,agua:r.agua,desnivel:r.dn,nivelDinamico:num($('nd').value),comprimento:r.L,cano:sel.value,diametro:r.D,km:num($('km').value),
+    vendedor:$('vendedor').value,tipo:tipoKit(),comprimento:r.L,vazao:r.Q,diametro:r.D,desnivel:r.dn,km:num($('km').value),
     amt:Math.round(r.amt*100)/100,kitId:st.kit,kitNome:v?v.p.nome:'',qtd:v?v.qtd:1,instalacao:st.inst,estrutura:st.estr,kitMontagem:st.kitm,
     total:v?Math.round(v.total*100)/100:0,vista:v?Math.round(v.vista*100)/100:0};
 }
@@ -417,7 +402,7 @@ async function gerarPDF(){
   lab('Produto:',M,y);val(v.p.nome,M+30,y);lab('Quantidade:',140,y);val(v.qtd,163,y);y+=5;
   lab('INSTALAÇÃO',M,y);val(st.inst?'SIM':'NÃO',M+40,y);y+=5;
   lab('ESTRUTURAL',M,y);val(st.estr?'SIM':'NÃO',M+40,y);y+=5;
-  lab('KIT DE MONTAGEM',M,y);val(st.kitm?'SIM':'NÃO',M+40,y);val(st.tipo,M+60,y);y+=5;
+  lab('KIT DE MONTAGEM',M,y);val(st.kitm?'SIM':'NÃO',M+40,y);val(v.p.tipo,M+60,y);y+=5;
   lab('DISTÂNCIA',M,y);val(fmt(d.km)+' km',M+40,y);y+=6;
   faixa('Especificações do produto selecionado');
   const y0=y; const esp=[['Modelo:',v.p.modelo],['Potência (W):',fmt(v.p.potencia)],['CV:',v.p.cv],['MCA (máximo):',fmt(v.p.mcaMax)],
@@ -437,7 +422,7 @@ async function gerarPDF(){
   GARANTIA.forEach(t=>{const ls=doc.splitTextToSize(t,W-2*M);doc.setFont('helvetica','normal');doc.text(ls,M,y);y+=ls.length*4});
   y+=5;doc.setFontSize(9);val('Assinado em: ___/___/______',M,y);val('Assinatura do cliente: _______________________________',95,y);y+=9;
   doc.setFontSize(8.5);val('* Necessário estrutura de madeira por conta do Cliente para a instalação das Placas.',M,y);y+=4;
-  doc.setFont('helvetica','italic');doc.text('Dimensionamento: AMT '+fmt(r.amt,1)+' mca, '+fmt(r.agua)+' litros/dia. Vendedor: '+d.vendedor+'.',M,y);y+=7;
+  doc.setFont('helvetica','italic');doc.text('Dimensionamento: L '+fmt(r.L)+' m, Q '+fmt(r.Q,2)+' m³/h, D '+fmt(r.D,1)+' mm, Dn '+fmt(r.dn,1)+' m, AMT '+fmt(r.amt,1)+' mca. Vendedor: '+d.vendedor+'.',M,y);y+=7;
   doc.setFontSize(10);lab('M3TECH – Soluções Inteligentes em Energia Solar, Bombas Solares e Materiais Elétricos.',M,y);
   const nomeArq=d.cliente.replace(/[\s]+/g,'_').replace(/[\\/:*?"<>|]/g,'-')+'_Proposta_'+numero+'.pdf';
   try{doc.save(nomeArq);$('msg').textContent='PDF gerado: '+nomeArq}
@@ -460,7 +445,7 @@ function renderHist(){
 $('busca').oninput=renderHist;
 function baixar(nome,conteudo,tipo){const b=new Blob([conteudo],{type:tipo});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=nome;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}
 $('btn-csv').onclick=()=>{
-  const cols=['numero','criadoEm','vendedor','cliente','cpf','endereco','cidade','tipo','agua','desnivel','nivelDinamico','comprimento','diametro','km','amt','kitNome','qtd','total','vista'];
+  const cols=['numero','criadoEm','vendedor','cliente','cpf','endereco','cidade','tipo','comprimento','vazao','diametro','desnivel','km','amt','kitNome','qtd','total','vista'];
   const esc=v=>{v=v==null?'':String(v);return /[;"\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
   const linhas=[cols.join(';')].concat(propostas.map(p=>cols.map(c=>esc(typeof p[c]==='number'?String(p[c]).replace('.',','):p[c])).join(';')));
   baixar('propostas-m3-bombas.csv','\ufeff'+linhas.join('\r\n'),'text/csv;charset=utf-8');
@@ -468,9 +453,8 @@ $('btn-csv').onclick=()=>{
 function abrir(p){
   $('cli-nome').value=p.cliente||'';$('cli-cpf').value=p.cpf||'';$('cli-end').value=p.endereco||'';$('cli-cid').value=p.cidade||'';
   if(p.vendedor)$('vendedor').value=p.vendedor;
-  st.tipo=p.tipo||'CANETA';document.querySelectorAll('#tipo button').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.tipo===st.tipo)));
-  $('agua').value=p.agua||'';$('desnivel').value=p.desnivel||'';$('nd').value=p.nivelDinamico||'';$('comp').value=p.comprimento||'';
-  sel.value=p.cano??'1'; if(p.cano==='man')$('dman').value=p.diametro||'';
+  $('comp').value=p.comprimento||'';$('q').value=p.vazao!=null?p.vazao:(p.agua?Math.round(p.agua/5)/1000:'');$('diam').value=p.diametro||'';
+  $('desnivel').value=p.vazao!=null?(p.desnivel||''):((num(p.desnivel)+num(p.nivelDinamico))||'');
   $('km').value=p.km||'';$('qtd').value=p.qtd||1;st.kit=p.kitId;st.inst=p.instalacao!==false;st.estr=p.estrutura!==false;st.kitm=p.kitMontagem!==false;
   [['op-inst','inst'],['op-estr','estr'],['op-kit','kitm']].forEach(([id,k])=>$(id).setAttribute('aria-pressed',String(st[k])));
   st.editId=p.id;st.numero=p.numero;st.criadoEm=p.criadoEm;
