@@ -464,7 +464,7 @@ $('btn-pdf').onclick=gerarPDF;
 
 // ---------- nuvem da equipe (planilha Google via Apps Script)
 // Cole aqui o endereço do Apps Script implantado (termina em /exec). Vazio = só neste aparelho.
-const NUVEM_URL='';
+const NUVEM_URL='https://script.google.com/macros/s/AKfycbysSyXvP6yC81zTKSDk_OAXRNO2mxl6owvPmqGbipegebEEqExympohf80TzytH3t7fuA/exec';
 const nuvem={chave:LS.get('m3-nuvem-chave',''),ultima:'',erro:'',ocupado:false,denovo:false};
 (()=>{const m=location.hash.match(/nuvem=([^&]+)/);if(m){nuvem.chave=decodeURIComponent(m[1]).trim();LS.set('m3-nuvem-chave',nuvem.chave);history.replaceState(null,'',location.pathname+location.search)}})();
 function nuvemAtiva(){return !!(NUVEM_URL&&nuvem.chave)}
