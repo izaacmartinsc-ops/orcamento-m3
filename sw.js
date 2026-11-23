@@ -1,7 +1,7 @@
 // Guarda o app no aparelho para funcionar sem internet.
 // Ao mudar qualquer arquivo do app (menos precos.json), aumente a VERSAO.
-const VERSAO = 'm3-orcamento-v2';
-const ARQUIVOS = ['./', 'index.html', 'jspdf.umd.min.js', 'header.jpg', 'foto.jpg', 'precos.json',
+const VERSAO = 'm3-orcamento-v3';
+const ARQUIVOS = ['./', 'index.html', 'jspdf.umd.min.js', 'header.jpg', 'foto.jpg', 'precos.json', 'curvas.json',
   'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -16,9 +16,10 @@ self.addEventListener('fetch', e => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   // precos.json: tenta a internet primeiro (preço novo), senão usa a cópia guardada
-  if (url.pathname.endsWith('/precos.json')) {
-    e.respondWith(fetch(req).then(r => { const c = r.clone(); caches.open(VERSAO).then(k => k.put('precos.json', c)); return r; })
-      .catch(() => caches.match('precos.json')));
+  if (url.pathname.endsWith('/precos.json') || url.pathname.endsWith('/curvas.json')) {
+    const nome = url.pathname.endsWith('/curvas.json') ? 'curvas.json' : 'precos.json';
+    e.respondWith(fetch(req).then(r => { const c = r.clone(); caches.open(VERSAO).then(k => k.put(nome, c)); return r; })
+      .catch(() => caches.match(nome)));
     return;
   }
   // demais arquivos (e as fontes do Google): usa a cópia guardada e atualiza em segundo plano
