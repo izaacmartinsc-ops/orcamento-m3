@@ -187,7 +187,7 @@ td.r,th.r{text-align:right}
   <!-- HISTÓRICO -->
   <main id="view-hist" hidden>
     <section class="step"><h2>Propostas salvas</h2>
-      <div class="body hist"><p class="note">As propostas ficam guardadas neste aparelho. Exporte de vez em quando para ter uma cópia.</p><div class="actions"><input id="busca" placeholder="Buscar por cliente" style="flex:1 1 220px"><button class="btn g" id="btn-csv" type="button">Exportar planilha (CSV)</button></div><ul id="lista-hist"></ul></div>
+      <div class="body hist"><div class="actions" style="align-items:center"><p class="note" id="nuvem-status" style="flex:1 1 220px;margin:0">As propostas ficam guardadas neste aparelho. Exporte de vez em quando para ter uma cópia.</p><button class="btn g" id="btn-sync" type="button" hidden>Atualizar agora</button></div><div class="actions" id="nuvem-chave-box" hidden><input id="nuvem-chave" placeholder="Chave da equipe (peça ao Izaac)" autocomplete="off" style="flex:1 1 220px"><button class="btn" id="btn-chave" type="button">Conectar</button></div><div class="actions"><input id="busca" placeholder="Buscar por cliente" style="flex:1 1 220px"><button class="btn g" id="btn-csv" type="button">Exportar planilha (CSV)</button></div><ul id="lista-hist"></ul></div>
     </section>
   </main>
 
@@ -395,10 +395,11 @@ async function salvar(silencioso){
   if(!d.cliente){$('msg').textContent='Preencha o nome do cliente antes de salvar.';$('cli-nome').focus();return null}
   const agora=new Date().toISOString();
   if(st.editId){const i=propostas.findIndex(p=>p.id===st.editId);const reg={...d,id:st.editId,numero:st.numero,criadoEm:st.criadoEm,atualizadoEm:agora};if(i>=0)propostas[i]=reg;else propostas.unshift(reg)}
-  else{st.numero=numeroProposta();st.criadoEm=agora;st.editId='p'+st.numero;propostas.unshift({...d,id:st.editId,numero:st.numero,criadoEm:agora})}
+  else{st.numero=numeroProposta();st.criadoEm=agora;st.editId='p'+st.numero+'-'+Math.random().toString(36).slice(2,6);propostas.unshift({...d,id:st.editId,numero:st.numero,criadoEm:agora})}
   if(!LS.set('m3-propostas',propostas)){$('msg').textContent='Não foi possível salvar neste aparelho (memória do navegador bloqueada). O PDF ainda pode ser baixado.';return st.numero}
   renderHist();
-  if(!silencioso)$('msg').textContent=`Proposta de ${d.cliente} salva neste aparelho.`;
+  if(!silencioso)$('msg').textContent=nuvemAtiva()?`Proposta de ${d.cliente} salva. Enviando para a nuvem da equipe…`:`Proposta de ${d.cliente} salva neste aparelho.`;
+  sincroniza().then(()=>{if(!silencioso&&nuvemAtiva())$('msg').textContent=nuvem.erro?`Proposta de ${d.cliente} salva neste aparelho. Vai para a nuvem quando a conexão voltar.`:`Proposta de ${d.cliente} salva na nuvem da equipe.`});
   return st.numero;
 }
 $('btn-salvar').onclick=()=>salvar(false);
@@ -460,6 +461,54 @@ async function gerarPDF(){
   catch(e){$('msg').textContent='Não foi possível gerar o PDF: '+(e&&e.message||'erro')}
 }
 $('btn-pdf').onclick=gerarPDF;
+
+// ---------- nuvem da equipe (planilha Google via Apps Script)
+// Cole aqui o endereço do Apps Script implantado (termina em /exec). Vazio = só neste aparelho.
+const NUVEM_URL='https://script.google.com/macros/s/AKfycbysSyXvP6yC81zTKSDk_OAXRNO2mxl6owvPmqGbipegebEEqExympohf80TzytH3t7fuA/exec';
+const nuvem={chave:LS.get('m3-nuvem-chave',''),ultima:'',erro:'',ocupado:false,denovo:false};
+(()=>{const m=location.hash.match(/nuvem=([^&]+)/);if(m){nuvem.chave=decodeURIComponent(m[1]).trim();LS.set('m3-nuvem-chave',nuvem.chave);history.replaceState(null,'',location.pathname+location.search)}})();
+function nuvemAtiva(){return !!(NUVEM_URL&&nuvem.chave)}
+const tsP=p=>p.atualizadoEm||p.criadoEm||'';
+function mostraNuvem(){
+  const s=$('nuvem-status'), b=$('btn-sync'), cb=$('nuvem-chave-box');
+  if(!NUVEM_URL){b.hidden=true;cb.hidden=true;return}
+  const pend=propostas.filter(p=>!p.sync).length;
+  const txtPend=pend?` ${pend} proposta${pend>1?'s':''} deste aparelho ainda não subiu.`:'';
+  cb.hidden=!!nuvem.chave&&nuvem.erro!=='chave';
+  b.hidden=!nuvem.chave;
+  if(!nuvem.chave){s.textContent='Para ver as propostas de toda a equipe, digite a chave da equipe. Até lá, elas ficam só neste aparelho.';return}
+  if(nuvem.ocupado){s.textContent='Atualizando com a nuvem da equipe…';return}
+  if(nuvem.erro==='chave'){s.textContent='A chave da equipe não confere. Digite de novo (peça ao Izaac).'+txtPend;return}
+  if(nuvem.erro){s.textContent='Sem conexão com a nuvem agora. As propostas estão salvas neste aparelho e sobem sozinhas quando a internet voltar.'+txtPend;return}
+  s.textContent=nuvem.ultima?`Nuvem da equipe: atualizado às ${new Date(nuvem.ultima).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}.`+txtPend:'Nuvem da equipe conectada.'+txtPend;
+}
+async function sincroniza(){
+  if(!nuvemAtiva()){mostraNuvem();return}
+  if(nuvem.ocupado){nuvem.denovo=true;return}
+  nuvem.ocupado=true;mostraNuvem();
+  try{
+    const env=propostas.filter(p=>!p.sync).map(p=>{const {sync,...r}=p;return r});
+    if(env.length){
+      const r=await fetch(NUVEM_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({chave:nuvem.chave,propostas:env})});
+      const j=await r.json(); if(!j.ok)throw new Error(j.erro||'erro');
+      const enviado=new Map(env.map(p=>[p.id,tsP(p)]));
+      propostas.forEach(p=>{if(enviado.get(p.id)===tsP(p))p.sync=true});
+    }
+    const r=await fetch(NUVEM_URL+'?chave='+encodeURIComponent(nuvem.chave)+'&t='+Date.now());
+    const j=await r.json(); if(!j.ok)throw new Error(j.erro||'erro');
+    const porId=new Map(propostas.map(p=>[p.id,p]));
+    (j.propostas||[]).forEach(n=>{if(!n||!n.id)return;const a=porId.get(n.id);if(!a||a.sync||tsP(n)>tsP(a))porId.set(n.id,{...n,sync:true})});
+    propostas=[...porId.values()].sort((a,b)=>String(b.criadoEm||'').localeCompare(String(a.criadoEm||'')));
+    LS.set('m3-propostas',propostas);
+    nuvem.ultima=new Date().toISOString();nuvem.erro='';
+  }catch(e){nuvem.erro=(e&&e.message)==='chave'?'chave':'rede'}
+  finally{nuvem.ocupado=false;renderHist();mostraNuvem();if(nuvem.denovo){nuvem.denovo=false;sincroniza()}}
+}
+$('btn-sync').onclick=sincroniza;
+$('btn-chave').onclick=()=>{const v=$('nuvem-chave').value.trim();if(!v)return;nuvem.chave=v;LS.set('m3-nuvem-chave',v);nuvem.erro='';$('nuvem-chave').value='';sincroniza()};
+$('tab-hist').addEventListener('click',sincroniza);
+addEventListener('online',sincroniza);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')sincroniza()});
 
 // ---------- histórico
 function renderHist(){
@@ -546,7 +595,7 @@ async function carregaPrecos(){
 }
 const abrePrecos=()=>{const show=location.hash==='#precos';$('tab-precos').hidden=!show;if(show)$('tab-precos').click()};
 addEventListener('hashchange',abrePrecos);
-render();carregaCurvas();carregaPrecos().then(abrePrecos);
+render();carregaCurvas();carregaPrecos().then(abrePrecos);mostraNuvem();sincroniza();
 addEventListener('online',carregaPrecos);
 })();
 </script>
