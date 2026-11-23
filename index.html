@@ -272,8 +272,36 @@ function calcula(){
   const amt=pronto?perda+dn+perdasLoc:0;
   return {L,dn,D,Q,V,perda,amt,pronto,perdasLoc,minMca:amt*(1+num(c.folga))};
 }
-function atende(p,r){return r.pronto&&num(p.mcaMax)>=r.minMca&&num(p.vazaoH)>=r.Q*1000}
+// ---------- curvas vazão x MCA (curvas.json)
+let curvas={};
+function horasSol(){const h=num(cfg&&cfg.horasSol);return h>0?h:5}
+function curvaDe(p){return p&&curvas[p.id]||null}
+// vazão em L/dia na altura mca, interpolando entre os pontos da curva; acima do último ponto = 0
+function vazaoDiaEm(c,mca){
+  const pts=c.pontos, f=c.unidade==='L/h'?horasSol():1;
+  if(!pts||!pts.length)return 0;
+  if(mca<=pts[0][0])return pts[0][1]*f;
+  for(let i=1;i<pts.length;i++){const [m0,v0]=pts[i-1],[m1,v1]=pts[i];
+    if(mca<=m1)return (v0+(v1-v0)*(mca-m0)/(m1-m0))*f}
+  return 0;
+}
+function precisaDia(r){return r.Q*1000*horasSol()}
+function entrega(p,r){const c=curvaDe(p);return c&&r.pronto?vazaoDiaEm(c,r.minMca):null}
+function atende(p,r){
+  if(!r.pronto)return false;
+  const e=entrega(p,r);
+  if(e!=null)return e>0&&e>=precisaDia(r)-0.5;
+  return num(p.mcaMax)>=r.minMca&&num(p.vazaoH)>=r.Q*1000;
+}
+async function carregaCurvas(){
+  let j=null;
+  try{const r=await fetch('curvas.json',{cache:'no-cache'});if(r.ok){j=await r.json();LS.set('m3-curvas',j)}}catch(e){}
+  if(!j)j=LS.get('m3-curvas',null);
+  curvas={};(j&&j.curvas||[]).forEach(c=>(c.ids||[]).forEach(id=>curvas[id]=c));
+  render();
+}
 
+function custoKit(p){return num(p.preco)+num(p.modulos)*num(cfg&&cfg.modulo)}
 function valores(r){
   const c=cfg||{}; const p=produtos.find(x=>x.id===st.kit); if(!p)return null;
   const qtd=Math.max(1,Math.round(num($('qtd').value))||1);
@@ -305,12 +333,12 @@ function render(){
   if(!r.pronto){vm.innerHTML='<span class="pill warn">Preencha L, Q e D</span>'}
   else if(r.V<=2.5009){vm.innerHTML='<span class="pill ok">Velocidade dentro do limite (2,5 m/s)</span>'}
   else{vm.innerHTML='<span class="pill warn">Velocidade acima do limite: use um cano mais grosso</span>'}
-  $('r-explica').textContent=r.pronto?`AMT = perda de carga ${fmt(r.perda,2)} + desnível ${fmt(r.dn,1)} + perdas localizadas ${fmt(r.perdasLoc,0)} mca. Kits indicados têm MCA máx de pelo menos ${fmt(r.minMca,1)} mca (AMT + ${fmt(num(cfg&&cfg.folga)*100)}% de folga) e vazão máxima de pelo menos ${fmt(r.Q*1000)} L/h.`:'';
+  $('r-explica').textContent=r.pronto?`AMT = perda de carga ${fmt(r.perda,2)} + desnível ${fmt(r.dn,1)} + perdas localizadas ${fmt(r.perdasLoc,0)} mca. Kits indicados têm MCA máx de pelo menos ${fmt(r.minMca,1)} mca (AMT + ${fmt(num(cfg&&cfg.folga)*100)}% de folga) e entregam pelo menos ${fmt(precisaDia(r))} L/dia (${fmt(r.Q,2)} m³/h × ${fmt(horasSol())} h de sol) nessa altura, pela curva de vazão do fabricante. Kits sem curva usam só MCA máx e vazão a altura zero.`:'';
 
   // kits
   const box=$('kits'); box.textContent='';
   const lista=produtos.map(p=>({p,ok:atende(p,r)}))
-    .filter(x=>x.ok||st.verTodos||x.p.id===st.kit).sort((a,b)=>(b.ok-a.ok)||(num(a.p.preco)-num(b.p.preco)));
+    .filter(x=>x.ok||st.verTodos||x.p.id===st.kit).sort((a,b)=>(b.ok-a.ok)||(custoKit(a.p)-custoKit(b.p)));
   if(!produtos.length){box.innerHTML='<p class="note">Os kits aparecem aqui assim que os preços carregarem.</p>'}
   else if(!lista.length){box.innerHTML=`<p class="note">${r.pronto?'Nenhum kit da tabela atende esta altura e esta vazão. Marque "Mostrar também os que não atendem" ou consulte o fornecedor.':'Preencha a parte 2 para ver os kits indicados.'}</p>`}
   lista.forEach(({p,ok})=>{
@@ -318,7 +346,9 @@ function render(){
     b.setAttribute('aria-pressed',String(p.id===st.kit));
     b.innerHTML=`<span class="n"></span><span class="m"></span><span class="p">${brl(p.preco)}</span><span>${ok?'<span class="pill ok">Atende</span>':'<span class="pill warn">Não atende</span>'}</span>`;
     b.querySelector('.n').textContent=p.nome;
-    b.querySelector('.m').textContent=`${p.tipo==='CANETA'?'Caneta':'Superfície'} · ${p.marca||''} ${p.modelo||''} · MCA máx ${fmt(p.mcaMax)} · ${fmt(p.vazaoH)} L/h (altura zero) · ${p.modulos} placa(s)`;
+    const e=entrega(p,r);
+    const vz=e!=null?`entrega ≈ ${fmt(e)} L/dia a ${fmt(r.minMca,1)} mca${curvaDe(p).leituraDeGrafico?' (curva lida do gráfico)':''}`:(r.pronto?`sem curva: MCA máx ${fmt(p.mcaMax)} · ${fmt(p.vazaoH)} L/h (altura zero)`:`MCA máx ${fmt(p.mcaMax)} · ${fmt(p.vazaoH)} L/h (altura zero)`);
+    b.querySelector('.m').textContent=`${p.tipo==='CANETA'?'Caneta':'Superfície'} · ${p.marca||''} ${p.modelo||''} · ${p.modulos} placa(s) · ${vz}`;
     b.onclick=()=>{st.kit=p.id;render()};
     box.appendChild(b);
   });
@@ -408,6 +438,7 @@ async function gerarPDF(){
   const y0=y; const esp=[['Modelo:',v.p.modelo],['Potência (W):',fmt(v.p.potencia)],['CV:',v.p.cv],['MCA (máximo):',fmt(v.p.mcaMax)],
     ['Vazão/hora (MCA=0):',fmt(v.p.vazaoH)+' L'],['Vazão/dia (MCA=0):',fmt(v.p.vazaoDia)+' L'],['Módulos necessários:',v.mods+' x 550W'],
     ['Preço unitário:',brl(v.itens[0].u)],['Subtotal produto:',brl(v.itens[0].s)]];
+  const ent=entrega(v.p,r); if(ent!=null)esp.splice(6,0,['Vazão estimada no local:','aprox. '+fmt(ent*v.qtd)+' L/dia ('+fmt(r.minMca,1)+' mca)']);
   esp.forEach(([a,b])=>{lab(a,M,y);val(b,M+40,y);y+=5});
   if(foto){const fw=82,fh=fw*474/700;doc.addImage(foto,'JPEG',W-M-fw,y0-3,fw,fh);y=Math.max(y,y0-3+fh+3)}
   y+=2;
@@ -515,7 +546,7 @@ async function carregaPrecos(){
 }
 const abrePrecos=()=>{const show=location.hash==='#precos';$('tab-precos').hidden=!show;if(show)$('tab-precos').click()};
 addEventListener('hashchange',abrePrecos);
-render();carregaPrecos().then(abrePrecos);
+render();carregaCurvas();carregaPrecos().then(abrePrecos);
 addEventListener('online',carregaPrecos);
 })();
 </script>
