@@ -1,6 +1,6 @@
 // Guarda o app no aparelho para funcionar sem internet.
 // Ao mudar qualquer arquivo do app (menos precos.json), aumente a VERSAO.
-const VERSAO = 'm3-orcamento-v3';
+const VERSAO = 'm3-orcamento-v4';
 const ARQUIVOS = ['./', 'index.html', 'jspdf.umd.min.js', 'header.jpg', 'foto.jpg', 'precos.json', 'curvas.json',
   'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
 
@@ -15,6 +15,8 @@ self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
+  // nuvem da equipe (Apps Script do Google): sempre direto na internet, nunca da cópia guardada
+  if (/(^|\.)(script\.google\.com|googleusercontent\.com)$/.test(url.hostname)) return;
   // precos.json: tenta a internet primeiro (preço novo), senão usa a cópia guardada
   if (url.pathname.endsWith('/precos.json') || url.pathname.endsWith('/curvas.json')) {
     const nome = url.pathname.endsWith('/curvas.json') ? 'curvas.json' : 'precos.json';
