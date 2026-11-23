@@ -1,5 +1,5 @@
 {
- "atualizadoEm": "2026-11-19",
+ "atualizadoEm": "2026-11-23",
  "config": {
   "modulo": 950,
   "estrutura": 150,
@@ -223,21 +223,6 @@
    "preco": 1130,
    "ordem": 14,
    "id": "k14"
-  },
-  {
-   "nome": "SUPERFÍCIE TH- 560W-  2/3 CV- 2 PLACAS",
-   "tipo": "SUPERFÍCIE",
-   "marca": "Thebe",
-   "modulos": 2,
-   "modelo": "M3S-560W-28",
-   "potencia": 560,
-   "cv": "2/3",
-   "mcaMax": 28,
-   "vazaoH": 4700,
-   "vazaoDia": 23500,
-   "preco": 1290,
-   "ordem": 15,
-   "id": "k15"
   },
   {
    "nome": "SUPERFÍCIE TH- 620W-  3/4 CV- 2 PLACAS",

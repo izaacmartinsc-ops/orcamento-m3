@@ -482,9 +482,11 @@
    "fonte": "Tabela Atomra KAV4-7.5-2K2-150-C"
   },
   {
-   "ids": [],
+   "ids": [
+    "k10"
+   ],
    "modelo": "KAV4-7.5-2K2-150-C",
-   "descricao": "Atomra 2200W 3CV 7 placas (catálogo do app tem 8 placas: confirmar)",
+   "descricao": "Atomra 2200W 3CV 8 placas (usa a tabela de 7 placas, decisão do Izaac 23/11)",
    "unidade": "L/dia",
    "pontos": [
     [

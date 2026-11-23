@@ -129,7 +129,7 @@ td.r,th.r{text-align:right}
           <label class="f">Q = Vazão<span class="unit"><input id="q" type="number" min="0" step="0.1" inputmode="decimal"><em>m³/h</em></span></label>
           <label class="f">D = Diâmetro interno <small>digite ou escolha na lista</small><span class="unit"><input id="diam" type="number" min="0" step="0.1" inputmode="decimal" list="lista-diam"><em>mm</em></span></label>
           <label class="f">Dn = Desnível<span class="unit"><input id="desnivel" type="number" min="0" inputmode="decimal"><em>m</em></span></label>
-          <label class="f">Distância até o cliente<span class="unit"><input id="km" type="number" min="0" inputmode="numeric"><em>km</em></span></label>
+          <label class="f">Distância até o cliente (só ida, o app dobra)<span class="unit"><input id="km" type="number" min="0" inputmode="numeric"><em>km</em></span></label>
         </div>
         <datalist id="lista-diam"></datalist>
       </div>
@@ -314,7 +314,7 @@ function valores(r){
     {n:'Kit inst. bomba superfície',q:(st.kitm&&p.tipo==='SUPERFÍCIE')?1:0,u:num(c.kitSup)},
     {n:'Kit inst. bomba caneta',q:(st.kitm&&p.tipo==='CANETA')?1:0,u:num(c.kitCaneta)},
     {n:'Instalação da bomba',q:st.inst?1:0,u:num(c.instalacao)*mods},
-    {n:'Deslocamento (km)',q:num($('km').value),u:num(c.km)}
+    {n:'Deslocamento (km ida e volta)',q:num($('km').value)*2,u:num(c.km)}
   ];
   itens.forEach(i=>{if(!i.produto)i.s=i.q*i.u});
   const total=itens.reduce((a,i)=>a+i.s,0);
@@ -433,7 +433,7 @@ async function gerarPDF(){
   lab('INSTALAÇÃO',M,y);val(st.inst?'SIM':'NÃO',M+40,y);y+=5;
   lab('ESTRUTURAL',M,y);val(st.estr?'SIM':'NÃO',M+40,y);y+=5;
   lab('KIT DE MONTAGEM',M,y);val(st.kitm?'SIM':'NÃO',M+40,y);val(v.p.tipo,M+60,y);y+=5;
-  lab('DISTÂNCIA',M,y);val(fmt(d.km)+' km',M+40,y);y+=6;
+  lab('DISTÂNCIA',M,y);val(fmt(d.km)+' km (ida e volta: '+fmt(d.km*2)+' km)',M+40,y);y+=6;
   faixa('Especificações do produto selecionado');
   const y0=y; const esp=[['Modelo:',v.p.modelo],['Potência (W):',fmt(v.p.potencia)],['CV:',v.p.cv],['MCA (máximo):',fmt(v.p.mcaMax)],
     ['Vazão/hora (MCA=0):',fmt(v.p.vazaoH)+' L'],['Vazão/dia (MCA=0):',fmt(v.p.vazaoDia)+' L'],['Módulos necessários:',v.mods+' x 550W'],
