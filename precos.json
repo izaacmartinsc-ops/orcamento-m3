@@ -1,5 +1,5 @@
 {
- "atualizadoEm": "2026-11-23",
+ "atualizadoEm": "2026-11-24",
  "config": {
   "modulo": 950,
   "estrutura": 150,
@@ -10,7 +10,7 @@
   "adicionalBomba": 0,
   "descontoVista": 0.05,
   "horasSol": 5,
-  "folga": 0.2,
+  "folga": 0,
   "perdasLocalizadas": 5
  },
  "produtos": [

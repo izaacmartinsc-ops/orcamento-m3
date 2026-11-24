@@ -334,7 +334,7 @@ function render(){
   if(!r.pronto){vm.innerHTML='<span class="pill warn">Preencha L, Q e D</span>'}
   else if(r.V<=2.5009){vm.innerHTML='<span class="pill ok">Velocidade dentro do limite (2,5 m/s)</span>'}
   else{vm.innerHTML='<span class="pill warn">Velocidade acima do limite: use um cano mais grosso</span>'}
-  $('r-explica').textContent=r.pronto?`AMT = perda de carga ${fmt(r.perda,2)} + desnível ${fmt(r.dn,1)} + perdas localizadas ${fmt(r.perdasLoc,0)} mca. Kits indicados têm MCA máx de pelo menos ${fmt(r.minMca,1)} mca (AMT + ${fmt(num(cfg&&cfg.folga)*100)}% de folga) e entregam pelo menos ${fmt(precisaDia(r))} L/dia (${fmt(r.Q,2)} m³/h × ${fmt(horasSol())} h de sol) nessa altura, pela curva de vazão do fabricante. Kits sem curva usam só MCA máx e vazão a altura zero.`:'';
+  $('r-explica').textContent=r.pronto?`AMT = perda de carga ${fmt(r.perda,2)} + desnível ${fmt(r.dn,1)} + perdas localizadas ${fmt(r.perdasLoc,0)} mca. Kits indicados têm MCA máx de pelo menos ${fmt(r.minMca,1)} mca${num(cfg&&cfg.folga)>0?' (AMT + '+fmt(num(cfg.folga)*100)+'% de folga)':''} e entregam pelo menos ${fmt(precisaDia(r))} L/dia (${fmt(r.Q,2)} m³/h × ${fmt(horasSol())} h de sol) nessa altura, pela curva de vazão do fabricante. Kits sem curva usam só MCA máx e vazão a altura zero.`:'';
 
   // kits
   const box=$('kits'); box.textContent='';
