@@ -1,6 +1,6 @@
 // Guarda o app no aparelho para funcionar sem internet.
 // Ao mudar qualquer arquivo do app (menos precos.json), aumente a VERSAO.
-const VERSAO = 'm3-orcamento-v8';
+const VERSAO = 'm3-orcamento-v9';
 const ARQUIVOS = ['./', 'index.html', 'jspdf.umd.min.js', 'header.jpg', 'foto.jpg', 'precos.json', 'curvas.json',
   'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
 
