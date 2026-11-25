@@ -82,6 +82,12 @@ td.r,th.r{text-align:right}
 .t4{background:var(--accent);color:var(--accent-ink)}.tv{background:var(--ink);color:var(--ink-fg)}
 .totals b{font:700 26px var(--display);font-variant-numeric:tabular-nums}
 [hidden]{display:none!important}
+.login{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:16px}
+.login form{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:22px 18px;width:100%;max-width:360px;display:grid;gap:12px}
+.login h1{margin:0;font:700 22px var(--display)}
+.userbox{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.lnk{border:0;background:none;color:var(--fg);text-decoration:underline;cursor:pointer;font:inherit;padding:4px}
+.extras{list-style:none;margin:0 0 10px;padding:0}.extras li{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-size:14px}
 .actions{display:flex;flex-wrap:wrap;gap:10px}
 .btn{border:0;border-radius:8px;padding:12px 16px;font:700 15px var(--body);cursor:pointer;background:var(--ink);color:var(--ink-fg)}
 .btn.y{background:var(--accent);color:var(--accent-ink)}
@@ -100,14 +106,26 @@ td.r,th.r{text-align:right}
 </head>
 <body>
 
+<div class="login" id="login" hidden>
+  <form id="form-login" autocomplete="on">
+    <div class="brand"><b>M3TECH</b><span>BOMBA SOLAR</span></div>
+    <h1>Entrar</h1>
+    <label class="f">Usuário<input id="login-usuario" autocomplete="username" autocapitalize="none" spellcheck="false"></label>
+    <label class="f">Senha<input id="login-senha" type="password" autocomplete="current-password"></label>
+    <button class="btn y" id="btn-login" type="submit">Entrar</button>
+    <div class="msg" id="msg-login" role="status"></div>
+  </form>
+</div>
+
 <div class="wrap">
   <header class="top">
     <div class="brand"><b>M3TECH</b><span>BOMBA SOLAR</span></div>
     <nav class="tabs" role="tablist">
       <button id="tab-orc" role="tab" aria-selected="true" data-view="orc">Orçamento</button>
       <button id="tab-hist" role="tab" aria-selected="false" data-view="hist">Propostas salvas</button>
-      <button id="tab-precos" role="tab" aria-selected="false" data-view="precos" hidden>Preços</button>
+      <button id="tab-precos" role="tab" aria-selected="false" data-view="precos" hidden>Administração</button>
     </nav>
+    <div class="userbox"><span id="user-nome"></span><button class="lnk" id="btn-sair" type="button">Sair</button></div>
   </header>
   <div id="status" class="banner">Carregando produtos e preços…</div>
 
@@ -119,24 +137,28 @@ td.r,th.r{text-align:right}
         <label class="f">CPF<input id="cli-cpf" inputmode="numeric" autocomplete="off"></label>
         <label class="f">Endereço<input id="cli-end" autocomplete="off"></label>
         <label class="f">Cidade/Estado<input id="cli-cid" value="MG"></label>
-        <label class="f">Vendedor<select id="vendedor"><option>Izaac</option><option>Heitor</option><option>Marcos</option></select></label>
+        <label class="f">Vendedor<input id="vendedor" readonly tabindex="-1"></label>
       </div>
     </section>
 
     <section class="step"><h2><i>2</i>Dados técnicos</h2>
       <div class="body">
+        <div class="toggles" style="margin-bottom:10px"><button type="button" class="chip" id="op-semdim" aria-pressed="false">Orçar sem dimensionamento</button></div>
         <div class="grid">
+          <div class="dimc" style="display:contents">
           <label class="f">L = Comprimento da tubulação<span class="unit"><input id="comp" type="number" min="0" inputmode="decimal"><em>m</em></span></label>
           <label class="f">Q = Vazão<span class="unit"><input id="q" type="number" min="0" step="0.1" inputmode="decimal"><em>m³/h</em></span></label>
           <label class="f">D = Diâmetro interno <small>digite ou escolha na lista</small><span class="unit"><input id="diam" type="number" min="0" step="0.1" inputmode="decimal" list="lista-diam"><em>mm</em></span></label>
           <label class="f">Dn = Desnível<span class="unit"><input id="desnivel" type="number" min="0" inputmode="decimal"><em>m</em></span></label>
+          <label class="f">MCA ajustado <small>opcional: substitui a altura calculada</small><span class="unit"><input id="mca-aj" type="number" min="0" step="0.1" inputmode="decimal"><em>mca</em></span></label>
+          </div>
           <label class="f">Distância até o cliente (só ida, o app dobra)<span class="unit"><input id="km" type="number" min="0" inputmode="numeric"><em>km</em></span></label>
         </div>
         <datalist id="lista-diam"></datalist>
       </div>
     </section>
 
-    <section class="step"><h2><i>3</i>Dimensionamento</h2>
+    <section class="step" id="sec-dim"><h2><i>3</i>Dimensionamento</h2>
       <div class="body">
         <div class="stats">
           <div class="stat main"><span>AMT (altura total)</span><b id="r-amt">–</b></div>
@@ -153,7 +175,7 @@ td.r,th.r{text-align:right}
       <div class="body">
         <div class="toggles"><button type="button" class="chip" id="ver-todos" aria-pressed="false">Mostrar também os que não atendem</button></div>
         <div class="kits" id="kits"></div>
-        <p class="note">A tabela de produtos traz a vazão com altura zero. A vazão real cai conforme a altura sobe: confirme na curva do fabricante antes de fechar.</p>
+        <p class="note">Toque num item abaixo para tirá-lo do orçamento (por exemplo, Placas quando o cliente já tem).</p>
         <div class="grid">
           <label class="f">Quantidade de kits<input id="qtd" type="number" min="1" value="1" inputmode="numeric"></label>
         </div>
@@ -161,12 +183,21 @@ td.r,th.r{text-align:right}
           <button type="button" class="chip" id="op-inst" aria-pressed="true">Instalação</button>
           <button type="button" class="chip" id="op-estr" aria-pressed="true">Estrutura</button>
           <button type="button" class="chip" id="op-kit" aria-pressed="true">Kit de montagem</button>
+          <button type="button" class="chip" id="op-mods" aria-pressed="true">Placas</button>
+          <button type="button" class="chip" id="op-desl" aria-pressed="true">Deslocamento</button>
         </div>
       </div>
     </section>
 
     <section class="step"><h2><i>5</i>Valores e proposta</h2>
       <div class="body">
+        <ul class="extras" id="lista-extras"></ul>
+        <div class="grid" style="margin-bottom:10px">
+          <label class="f">Item extra <small>nome</small><input id="extra-nome" autocomplete="off" placeholder="Ex.: 50 m de cano 32 mm"></label>
+          <label class="f">Valor total do item<span class="unit"><input id="extra-valor" type="number" min="0" step="0.01" inputmode="decimal"><em>R$</em></span></label>
+          <div style="display:flex;align-items:end"><button class="btn g" id="btn-extra" type="button" style="width:100%">Adicionar item</button></div>
+          <label class="f">Desconto à vista<span class="unit"><input id="desconto" type="number" min="0" max="100" step="0.5" inputmode="decimal"><em>%</em></span></label>
+        </div>
         <div class="tbl"><table>
           <thead><tr><th>Item</th><th class="r">Qtd</th><th class="r">Preço unit.</th><th class="r">Subtotal</th></tr></thead>
           <tbody id="itens"></tbody>
@@ -188,12 +219,28 @@ td.r,th.r{text-align:right}
   <!-- HISTÓRICO -->
   <main id="view-hist" hidden>
     <section class="step"><h2>Propostas salvas</h2>
-      <div class="body hist"><div class="actions" style="align-items:center"><p class="note" id="nuvem-status" style="flex:1 1 220px;margin:0">As propostas ficam guardadas neste aparelho. Exporte de vez em quando para ter uma cópia.</p><button class="btn g" id="btn-sync" type="button" hidden>Atualizar agora</button></div><div class="actions" id="nuvem-chave-box" hidden><input id="nuvem-chave" placeholder="Chave da equipe (peça ao Izaac)" autocomplete="off" style="flex:1 1 220px"><button class="btn" id="btn-chave" type="button">Conectar</button></div><div class="actions"><input id="busca" placeholder="Buscar por cliente" style="flex:1 1 220px"><button class="btn g" id="btn-csv" type="button">Exportar planilha (CSV)</button></div><ul id="lista-hist"></ul></div>
+      <div class="body hist"><div class="actions" style="align-items:center"><p class="note" id="nuvem-status" style="flex:1 1 220px;margin:0">As propostas ficam guardadas neste aparelho. Exporte de vez em quando para ter uma cópia.</p><button class="btn g" id="btn-sync" type="button" hidden>Atualizar agora</button></div><div class="actions"><input id="busca" placeholder="Buscar por cliente" style="flex:1 1 220px"><button class="btn g" id="btn-csv" type="button">Exportar planilha (CSV)</button></div><ul id="lista-hist"></ul></div>
     </section>
   </main>
 
   <!-- PREÇOS -->
   <main id="view-precos" hidden>
+    <div id="admin-area">
+    <section class="step"><h2>Usuários</h2>
+      <div class="body">
+        <div class="tbl"><table><thead><tr><th>Usuário</th><th>Nome</th><th>Perfil</th><th>Situação</th></tr></thead><tbody id="usu-lista"></tbody></table></div>
+        <p class="note">Toque num usuário para editar. Para criar, preencha um usuário novo. Senha em branco mantém a atual.</p>
+        <div class="grid">
+          <label class="f">Usuário (login)<input id="usu-usuario" autocapitalize="none" spellcheck="false" autocomplete="off"></label>
+          <label class="f">Nome (sai no PDF)<input id="usu-nome" autocomplete="off"></label>
+          <label class="f">Perfil<select id="usu-perfil"><option value="vendedor">Vendedor</option><option value="admin">Administrador</option></select></label>
+          <label class="f">Situação<select id="usu-ativo"><option value="sim">Ativo</option><option value="nao">Desativado</option></select></label>
+          <label class="f">Senha nova<input id="usu-senha" type="password" autocomplete="new-password"></label>
+        </div>
+        <div class="actions"><button class="btn y" id="btn-usu" type="button">Salvar usuário</button><button class="btn g" id="btn-usu-limpa" type="button">Limpar</button></div>
+        <div class="msg" id="msg-usu" role="status"></div>
+      </div>
+    </section>
     <section class="step"><h2>Valores fixos</h2>
       <div class="body grid" id="cfg-form"></div>
     </section>
@@ -203,10 +250,11 @@ td.r,th.r{text-align:right}
           <thead><tr><th>Nome do kit</th><th>Tipo</th><th>Marca</th><th>Modelo</th><th>Placas</th><th>W</th><th>CV</th><th>MCA máx</th><th>Vazão/h</th><th>Vazão/dia</th><th>Preço</th><th></th></tr></thead>
           <tbody id="prod-edit"></tbody>
         </table></div>
-        <div class="actions"><button class="btn g" id="btn-addprod" type="button">Adicionar kit</button><button class="btn y" id="btn-salvaprecos" type="button">Aplicar neste aparelho</button><button class="btn" id="btn-exportprecos" type="button">Baixar precos.json para publicar</button><button class="btn g" id="btn-voltaprecos" type="button">Voltar aos preços do site</button></div><p class="note">Para valer para todos: baixe o precos.json e substitua o arquivo no site. Cada aparelho pega os preços novos na próxima vez que abrir com internet.</p>
+        <div class="actions"><button class="btn g" id="btn-addprod" type="button">Adicionar kit</button><button class="btn y" id="btn-salvaprecos" type="button">Salvar para todos</button><button class="btn g" id="btn-exportprecos" type="button">Baixar cópia (precos.json)</button></div><p class="note">Ao salvar, os preços vão para a nuvem da equipe e cada aparelho passa a usar os novos na próxima vez que abrir com internet.</p>
         <div class="msg" id="msg-precos" role="status"></div>
       </div>
     </section>
+    </div>
   </main>
 </div>
 
@@ -246,10 +294,10 @@ const GARANTIA=[
  '• A garantia não cobre danos causados por instalação inadequada, quedas, impactos ou uso indevido.'
 ];
 
-let produtos=[], cfg=null, propostas=[], precosLocais=false;
+let produtos=[], cfg=null, propostas=[], precosLocais=false, sessao=null;
 const LS={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}}};
 propostas=LS.get('m3-propostas',[]);
-const st={kit:null, verTodos:false, inst:true, estr:true, kitm:true, editId:null};
+const st={kit:null, verTodos:false, inst:true, estr:true, kitm:true, mods:true, desl:true, semDim:false, extras:[], desconto:null, editId:null};
 
 // ---------- lista de diâmetros (tabela da planilha)
 const dl=$('lista-diam');
@@ -260,7 +308,6 @@ const tipoKit=()=>{const p=produtos.find(x=>x.id===st.kit);return p?p.tipo:''};
 const EXEMPLO={comp:200,q:3,diam:29,desnivel:50,km:50};
 function preencheExemplo(){Object.entries(EXEMPLO).forEach(([k,v])=>$(k).value=v)}
 preencheExemplo();
-try{const v=localStorage.getItem('m3-vendedor');if(v)$('vendedor').value=v}catch(e){}
 
 // ---------- cálculo (mesmas fórmulas da planilha)
 function calcula(){
@@ -271,7 +318,8 @@ function calcula(){
   const perdasLoc=c.perdasLocalizadas!=null?num(c.perdasLocalizadas):5;
   const pronto=Q>0&&L>0&&D>0;
   const amt=pronto?perda+dn+perdasLoc:0;
-  return {L,dn,D,Q,V,perda,amt,pronto,perdasLoc,minMca:amt*(1+num(c.folga))};
+  const aj=num($('mca-aj').value);
+  return {L,dn,D,Q,V,perda,amt,pronto,perdasLoc,ajustado:aj>0,minMca:aj>0?aj:amt*(1+num(c.folga))};
 }
 // ---------- curvas vazão x MCA (curvas.json)
 let curvas={};
@@ -287,7 +335,7 @@ function vazaoDiaEm(c,mca){
   return 0;
 }
 function precisaDia(r){return r.Q*1000*horasSol()}
-function entrega(p,r){const c=curvaDe(p);return c&&r.pronto?vazaoDiaEm(c,r.minMca):null}
+function entrega(p,r){const c=curvaDe(p);return c&&r.pronto&&!st.semDim?vazaoDiaEm(c,r.minMca):null}
 function atende(p,r){
   if(!r.pronto)return false;
   const e=entrega(p,r);
@@ -302,6 +350,7 @@ async function carregaCurvas(){
   render();
 }
 
+function descontoPct(){return st.desconto!=null?st.desconto:Math.round(num(cfg&&cfg.descontoVista)*1000)/10}
 function custoKit(p){return num(p.preco)+num(p.modulos)*num(cfg&&cfg.modulo)}
 function valores(r){
   const c=cfg||{}; const p=produtos.find(x=>x.id===st.kit); if(!p)return null;
@@ -310,22 +359,26 @@ function valores(r){
   const unit=num(p.preco)+num(c.adicionalBomba);
   const itens=[
     {n:p.nome,q:qtd,u:unit,s:num(p.preco)*qtd+num(c.adicionalBomba),produto:true},
-    {n:'Módulos 550W',q:mods,u:num(c.modulo)},
+    {n:'Módulos 550W',q:st.mods?mods:0,u:num(c.modulo)},
     {n:'Estrutura por módulo',q:st.estr?mods:0,u:num(c.estrutura)},
     {n:'Kit inst. bomba superfície',q:(st.kitm&&p.tipo==='SUPERFÍCIE')?1:0,u:num(c.kitSup)},
     {n:'Kit inst. bomba caneta',q:(st.kitm&&p.tipo==='CANETA')?1:0,u:num(c.kitCaneta)},
     {n:'Instalação da bomba',q:st.inst?1:0,u:num(c.instalacao)*mods},
-    {n:'Deslocamento (km ida e volta)',q:num($('km').value)*2,u:num(c.km)}
+    {n:'Deslocamento (km ida e volta)',q:st.desl?num($('km').value)*2:0,u:num(c.km)}
   ];
+  st.extras.forEach(x=>itens.push({n:x.nome,q:1,u:num(x.valor),extra:true}));
   itens.forEach(i=>{if(!i.produto)i.s=i.q*i.u});
   const total=itens.reduce((a,i)=>a+i.s,0);
-  const vista=total*(1-num(c.descontoVista));
-  return {p,qtd,mods,itens,total,vista};
+  const desc=descontoPct();
+  const vista=total*(1-desc/100);
+  return {p,qtd,mods,itens,total,vista,desc};
 }
 
 // ---------- render
 function render(){
   const r=calcula();
+  document.querySelector('.dimc').hidden=st.semDim; document.querySelectorAll('.dimc label').forEach(l=>l.hidden=st.semDim);
+  $('sec-dim').hidden=st.semDim; $('ver-todos').hidden=st.semDim;
   $('r-amt').textContent=r.pronto?fmt(r.amt,1)+' mca':'–';
   $('r-vazao').textContent=r.Q>0?fmt(r.Q,2)+' m³/h':'–';
   $('r-perda').textContent=r.pronto?fmt(r.perda,2)+' mca':'–';
@@ -334,21 +387,21 @@ function render(){
   if(!r.pronto){vm.innerHTML='<span class="pill warn">Preencha L, Q e D</span>'}
   else if(r.V<=2.5009){vm.innerHTML='<span class="pill ok">Velocidade dentro do limite (2,5 m/s)</span>'}
   else{vm.innerHTML='<span class="pill warn">Velocidade acima do limite: use um cano mais grosso</span>'}
-  $('r-explica').textContent=r.pronto?`AMT = perda de carga ${fmt(r.perda,2)} + desnível ${fmt(r.dn,1)} + perdas localizadas ${fmt(r.perdasLoc,0)} mca. Kits indicados têm MCA máx de pelo menos ${fmt(r.minMca,1)} mca${num(cfg&&cfg.folga)>0?' (AMT + '+fmt(num(cfg.folga)*100)+'% de folga)':''} e entregam pelo menos ${fmt(precisaDia(r))} L/dia (${fmt(r.Q,2)} m³/h × ${fmt(horasSol())} h de sol) nessa altura, pela curva de vazão do fabricante. Kits sem curva usam só MCA máx e vazão a altura zero.`:'';
+  $('r-explica').textContent=r.pronto?`AMT = perda de carga ${fmt(r.perda,2)} + desnível ${fmt(r.dn,1)} + perdas localizadas ${fmt(r.perdasLoc,0)} mca. A bomba é escolhida para ${fmt(r.minMca,1)} mca${r.ajustado?' (MCA ajustado pelo vendedor)':num(cfg&&cfg.folga)>0?' (AMT + '+fmt(num(cfg.folga)*100)+'% de folga)':''} e precisa entregar pelo menos ${fmt(precisaDia(r))} L/dia (${fmt(r.Q,2)} m³/h × ${fmt(horasSol())} h de sol) nessa altura, pela tabela de vazão do fabricante.`:'';
 
   // kits
   const box=$('kits'); box.textContent='';
-  const lista=produtos.map(p=>({p,ok:atende(p,r)}))
-    .filter(x=>x.ok||st.verTodos||x.p.id===st.kit).sort((a,b)=>(b.ok-a.ok)||(custoKit(a.p)-custoKit(b.p)));
+  const lista=produtos.map(p=>({p,ok:st.semDim||atende(p,r)}))
+    .filter(x=>x.ok||st.verTodos||x.p.id===st.kit).sort((a,b)=>st.semDim?(num(a.p.ordem)-num(b.p.ordem)):((b.ok-a.ok)||(custoKit(a.p)-custoKit(b.p))));
   if(!produtos.length){box.innerHTML='<p class="note">Os kits aparecem aqui assim que os preços carregarem.</p>'}
   else if(!lista.length){box.innerHTML=`<p class="note">${r.pronto?'Nenhum kit da tabela atende esta altura e esta vazão. Marque "Mostrar também os que não atendem" ou consulte o fornecedor.':'Preencha a parte 2 para ver os kits indicados.'}</p>`}
   lista.forEach(({p,ok})=>{
     const b=document.createElement('button');b.type='button';b.className='kit'+(ok?'':' off');
     b.setAttribute('aria-pressed',String(p.id===st.kit));
-    b.innerHTML=`<span class="n"></span><span class="m"></span><span class="p">${brl(p.preco)}</span><span>${ok?'<span class="pill ok">Atende</span>':'<span class="pill warn">Não atende</span>'}</span>`;
+    b.innerHTML=`<span class="n"></span><span class="m"></span><span class="p">${brl(p.preco)}</span><span>${st.semDim?'':ok?'<span class="pill ok">Atende</span>':'<span class="pill warn">Não atende</span>'}</span>`;
     b.querySelector('.n').textContent=p.nome;
     const e=entrega(p,r);
-    const vz=e!=null?`entrega ≈ ${fmt(e)} L/dia a ${fmt(r.minMca,1)} mca${curvaDe(p).leituraDeGrafico?' (curva lida do gráfico)':''}`:(r.pronto?`sem curva: MCA máx ${fmt(p.mcaMax)} · ${fmt(p.vazaoH)} L/h (altura zero)`:`MCA máx ${fmt(p.mcaMax)} · ${fmt(p.vazaoH)} L/h (altura zero)`);
+    const vz=e!=null?`entrega ≈ ${fmt(e)} L/dia a ${fmt(r.minMca,1)} mca`:`MCA máx ${fmt(p.mcaMax)}`;
     b.querySelector('.m').textContent=`${p.tipo==='CANETA'?'Caneta':'Superfície'} · ${p.marca||''} ${p.modelo||''} · ${p.modulos} placa(s) · ${vz}`;
     b.onclick=()=>{st.kit=p.id;render()};
     box.appendChild(b);
@@ -357,36 +410,48 @@ function render(){
   // valores
   const v=valores(r); const tb=$('itens'); tb.textContent='';
   if(v){
-    v.itens.forEach(i=>{const tr=document.createElement('tr');tr.innerHTML=`<td></td><td class="r">${fmt(i.q)}</td><td class="r">${brl(i.u)}</td><td class="r">${brl(i.s)}</td>`;tr.firstChild.textContent=i.n;tb.appendChild(tr)});
-    $('t-4x').textContent=brl(v.total);$('t-vista').textContent=brl(v.vista);
+    v.itens.filter(i=>i.q>0||i.produto).forEach(i=>{const tr=document.createElement('tr');tr.innerHTML=`<td></td><td class="r">${fmt(i.q)}</td><td class="r">${brl(i.u)}</td><td class="r">${brl(i.s)}</td>`;tr.firstChild.textContent=i.n;tb.appendChild(tr)});
+    $('t-4x').textContent=brl(v.total);$('t-vista').textContent=brl(v.vista)+(v.desc?' ('+fmt(v.desc,1).replace(',0','')+'%)':'');
     $('bar-total').textContent=brl(v.total);$('bar-kit').textContent=v.p.nome;
   }else{
     tb.innerHTML='<tr><td colspan="4" class="note">Escolha um kit na parte 4.</td></tr>';
     $('t-4x').textContent='–';$('t-vista').textContent='–';$('bar-total').textContent='R$ 0,00';$('bar-kit').textContent='Nenhum kit escolhido';
   }
   $('btn-pdf').disabled=!v; $('btn-salvar').disabled=!v;
+  const ul=$('lista-extras'); ul.textContent='';
+  st.extras.forEach((x,i)=>{const li=document.createElement('li');li.innerHTML='<span></span><span><b></b> <button class="lnk" type="button">Remover</button></span>';
+    li.firstChild.textContent=x.nome;li.querySelector('b').textContent=brl(x.valor);li.querySelector('button').onclick=()=>{st.extras.splice(i,1);render()};ul.appendChild(li)});
+  if(document.activeElement!==$('desconto'))$('desconto').value=cfg?String(descontoPct()):'';
 }
 
 // ---------- eventos
-['comp','q','diam','desnivel','km','qtd'].forEach(id=>$(id).addEventListener('input',render));
+['comp','q','diam','desnivel','km','qtd','mca-aj'].forEach(id=>$(id).addEventListener('input',render));
+$('desconto').addEventListener('input',()=>{const v=$('desconto').value.trim();st.desconto=v===''?null:Math.min(100,Math.max(0,num(v)));render()});
+$('btn-extra').onclick=()=>{const n=$('extra-nome').value.trim(),v=num($('extra-valor').value);
+  if(!n||!(v>0)){$('msg').textContent='Para adicionar um item extra, preencha o nome e o valor.';return}
+  st.extras.push({nome:n,valor:Math.round(v*100)/100});$('extra-nome').value='';$('extra-valor').value='';$('msg').textContent='';render()};
 const tog=(id,k)=>$(id).onclick=()=>{st[k]=!st[k];$(id).setAttribute('aria-pressed',String(st[k]));render()};
-tog('op-inst','inst');tog('op-estr','estr');tog('op-kit','kitm');tog('ver-todos','verTodos');
-$('vendedor').onchange=()=>{try{localStorage.setItem('m3-vendedor',$('vendedor').value)}catch(e){}};
+tog('op-inst','inst');tog('op-estr','estr');tog('op-kit','kitm');tog('op-mods','mods');tog('op-desl','desl');tog('ver-todos','verTodos');tog('op-semdim','semDim');
+const setTog=()=>[['op-inst','inst'],['op-estr','estr'],['op-kit','kitm'],['op-mods','mods'],['op-desl','desl'],['op-semdim','semDim']].forEach(([id,k])=>$(id).setAttribute('aria-pressed',String(st[k])));
 document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('nav.tabs button').forEach(x=>x.setAttribute('aria-selected',String(x===b)));
   ['orc','hist','precos'].forEach(v=>$('view-'+v).hidden=v!==b.dataset.view);
   document.querySelector('.bar').hidden=b.dataset.view!=='orc';
 });
 $('btn-novo').onclick=()=>{
-  ['cli-nome','cli-cpf','cli-end','comp','q','diam','desnivel','km'].forEach(id=>$(id).value='');
-  $('cli-cid').value='MG';$('qtd').value=1;st.kit=null;st.editId=null;$('msg').textContent='Formulário limpo.';render();
+  ['cli-nome','cli-cpf','cli-end','comp','q','diam','desnivel','km','mca-aj','extra-nome','extra-valor'].forEach(id=>$(id).value='');
+  $('cli-cid').value='MG';$('qtd').value=1;st.kit=null;st.editId=null;
+  Object.assign(st,{inst:true,estr:true,kitm:true,mods:true,desl:true,semDim:false,extras:[],desconto:null});setTog();
+  $('vendedor').value=sessao?sessao.usuario.nome:'';$('msg').textContent='Formulário limpo.';render();
 };
 
 function dadosProposta(){
   const r=calcula(), v=valores(r);
   return {cliente:$('cli-nome').value.trim(),cpf:$('cli-cpf').value.trim(),endereco:$('cli-end').value.trim(),cidade:$('cli-cid').value.trim(),
     vendedor:$('vendedor').value,tipo:tipoKit(),comprimento:r.L,vazao:r.Q,diametro:r.D,desnivel:r.dn,km:num($('km').value),
-    amt:Math.round(r.amt*100)/100,kitId:st.kit,kitNome:v?v.p.nome:'',qtd:v?v.qtd:1,instalacao:st.inst,estrutura:st.estr,kitMontagem:st.kitm,
+    amt:Math.round(r.amt*100)/100,mcaAjustado:r.ajustado?num($('mca-aj').value):null,semDimensionamento:st.semDim,
+    kitId:st.kit,kitNome:v?v.p.nome:'',qtd:v?v.qtd:1,instalacao:st.inst,estrutura:st.estr,kitMontagem:st.kitm,placas:st.mods,deslocamento:st.desl,
+    extras:st.extras.slice(),desconto:v?v.desc:descontoPct(),
     total:v?Math.round(v.total*100)/100:0,vista:v?Math.round(v.vista*100)/100:0};
 }
 function numeroProposta(){const d=new Date(),z=n=>String(n).padStart(2,'0');return `${d.getFullYear()}${z(d.getMonth()+1)}${z(d.getDate())}${z(d.getHours())}${z(d.getMinutes())}${z(d.getSeconds())}`}
@@ -399,8 +464,8 @@ async function salvar(silencioso){
   else{st.numero=numeroProposta();st.criadoEm=agora;st.editId='p'+st.numero+'-'+Math.random().toString(36).slice(2,6);propostas.unshift({...d,id:st.editId,numero:st.numero,criadoEm:agora})}
   if(!LS.set('m3-propostas',propostas)){$('msg').textContent='Não foi possível salvar neste aparelho (memória do navegador bloqueada). O PDF ainda pode ser baixado.';return st.numero}
   renderHist();
-  if(!silencioso)$('msg').textContent=nuvemAtiva()?`Proposta de ${d.cliente} salva. Enviando para a nuvem da equipe…`:`Proposta de ${d.cliente} salva neste aparelho.`;
-  sincroniza().then(()=>{if(!silencioso&&nuvemAtiva())$('msg').textContent=nuvem.erro?`Proposta de ${d.cliente} salva neste aparelho. Vai para a nuvem quando a conexão voltar.`:`Proposta de ${d.cliente} salva na nuvem da equipe.`});
+  if(!silencioso)$('msg').textContent=`Proposta de ${d.cliente} salva. Enviando para a nuvem…`;
+  sincroniza().then(()=>{if(!silencioso)$('msg').textContent=nuvem.erro?`Proposta de ${d.cliente} salva neste aparelho. Vai para a nuvem quando a conexão voltar.`:`Proposta de ${d.cliente} salva na nuvem.`});
   return st.numero;
 }
 $('btn-salvar').onclick=()=>salvar(false);
@@ -435,7 +500,8 @@ async function gerarPDF(){
   lab('INSTALAÇÃO',M,y);val(st.inst?'SIM':'NÃO',M+40,y);y+=5;
   lab('ESTRUTURAL',M,y);val(st.estr?'SIM':'NÃO',M+40,y);y+=5;
   lab('KIT DE MONTAGEM',M,y);val(st.kitm?'SIM':'NÃO',M+40,y);val(v.p.tipo,M+60,y);y+=5;
-  lab('DISTÂNCIA',M,y);val(fmt(d.km)+' km (ida e volta: '+fmt(d.km*2)+' km)',M+40,y);y+=6;
+  lab('PLACAS',M,y);val(st.mods?'SIM':'NÃO (cliente já possui)',M+40,y);y+=5;
+  lab('DISTÂNCIA',M,y);val(st.desl?fmt(d.km)+' km (ida e volta: '+fmt(d.km*2)+' km)':'SEM DESLOCAMENTO',M+40,y);y+=6;
   faixa('Especificações do produto selecionado');
   const y0=y; const esp=[['Modelo:',v.p.modelo],['Potência (W):',fmt(v.p.potencia)],['CV:',v.p.cv],['MCA (máximo):',fmt(v.p.mcaMax)],
     ['Vazão/hora (MCA=0):',fmt(v.p.vazaoH)+' L'],['Vazão/dia (MCA=0):',fmt(v.p.vazaoDia)+' L'],['Módulos necessários:',v.mods+' x 550W'],
@@ -447,15 +513,15 @@ async function gerarPDF(){
   doc.setFillColor(242,183,5);doc.rect(M,y-4,W-2*M,6,'F');lab('ITENS ADICIONAIS',M+2,y);y+=6;
   doc.setFillColor(29,28,25);doc.rect(M,y-4,W-2*M,6,'F');doc.setTextColor(255);lab('Item',M+2,y);lab('Qtd',105,y);doc.text('Preço unit.',160,y,{align:'right'});doc.text('Subtotal',W-M-2,y,{align:'right'});doc.setTextColor(0);y+=5.5;
   let sub=0;
-  v.itens.slice(1).forEach(i=>{val(i.n,M+2,y);val(fmt(i.q),105,y);doc.text(brl(i.u),160,y,{align:'right'});doc.text(brl(i.s),W-M-2,y,{align:'right'});sub+=i.s;y+=5});
+  v.itens.slice(1).filter(i=>i.q>0).forEach(i=>{val(i.n,M+2,y);val(fmt(i.q),105,y);doc.text(brl(i.u),160,y,{align:'right'});doc.text(brl(i.s),W-M-2,y,{align:'right'});sub+=i.s;y+=5});
   y+=1;lab('Subtotal itens:',135,y);doc.text(brl(sub),W-M-2,y,{align:'right'});y+=7;
   doc.setFillColor(242,183,5);doc.rect(M,y-5,W-2*M,8,'F');doc.setFontSize(11);lab('VALOR TOTAL EM ATÉ 4x NO CARTÃO SEM JUROS',M+3,y);doc.text(brl(v.total),W-M-3,y,{align:'right'});y+=10;
-  doc.setFillColor(29,28,25);doc.rect(M,y-5.5,W-2*M,9,'F');doc.setTextColor(255);doc.setFontSize(13);lab('PAGAMENTO À VISTA COM DESCONTO:',M+3,y+0.5);doc.setTextColor(242,183,5);doc.text(brl(v.vista),W-M-3,y+0.5,{align:'right'});doc.setTextColor(0);y+=10;
+  doc.setFillColor(29,28,25);doc.rect(M,y-5.5,W-2*M,9,'F');doc.setTextColor(255);doc.setFontSize(13);lab('PAGAMENTO À VISTA COM DESCONTO'+(v.desc?' ('+fmt(v.desc,1).replace(',0','')+'%)':'')+':',M+3,y+0.5);doc.setTextColor(242,183,5);doc.text(brl(v.vista),W-M-3,y+0.5,{align:'right'});doc.setTextColor(0);y+=10;
   doc.setFontSize(9);lab('GARANTIA',M,y);y+=4.5;doc.setFontSize(8.5);
   GARANTIA.forEach(t=>{const ls=doc.splitTextToSize(t,W-2*M);doc.setFont('helvetica','normal');doc.text(ls,M,y);y+=ls.length*4});
   y+=5;doc.setFontSize(9);val('Assinado em: ___/___/______',M,y);val('Assinatura do cliente: _______________________________',95,y);y+=9;
   doc.setFontSize(8.5);val('* Necessário estrutura de madeira por conta do Cliente para a instalação das Placas.',M,y);y+=4;
-  doc.setFont('helvetica','italic');doc.text('Dimensionamento: L '+fmt(r.L)+' m, Q '+fmt(r.Q,2)+' m³/h, D '+fmt(r.D,1)+' mm, Dn '+fmt(r.dn,1)+' m, AMT '+fmt(r.amt,1)+' mca. Vendedor: '+d.vendedor+'.',M,y);y+=7;
+  doc.setFont('helvetica','italic');doc.text((st.semDim?'':'Dimensionamento: L '+fmt(r.L)+' m, Q '+fmt(r.Q,2)+' m³/h, D '+fmt(r.D,1)+' mm, Dn '+fmt(r.dn,1)+' m, AMT '+fmt(r.amt,1)+' mca'+(r.ajustado?', MCA ajustado '+fmt(r.minMca,1)+' mca':'')+'. ')+'Vendedor: '+d.vendedor+'.',M,y);y+=7;
   doc.setFontSize(10);lab('M3TECH – Soluções Inteligentes em Energia Solar, Bombas Solares e Materiais Elétricos.',M,y);
   const nomeArq=d.cliente.replace(/[\s]+/g,'_').replace(/[\\/:*?"<>|]/g,'-')+'_Proposta_'+numero+'.pdf';
   try{doc.save(nomeArq);$('msg').textContent='PDF gerado: '+nomeArq}
@@ -463,50 +529,94 @@ async function gerarPDF(){
 }
 $('btn-pdf').onclick=gerarPDF;
 
-// ---------- nuvem da equipe (planilha Google via Apps Script)
-// Cole aqui o endereço do Apps Script implantado (termina em /exec). Vazio = só neste aparelho.
+// ---------- nuvem da equipe (planilha Google via Apps Script) com login
 const NUVEM_URL='https://script.google.com/macros/s/AKfycbysSyXvP6yC81zTKSDk_OAXRNO2mxl6owvPmqGbipegebEEqExympohf80TzytH3t7fuA/exec';
-const nuvem={chave:LS.get('m3-nuvem-chave',''),ultima:'',erro:'',ocupado:false,denovo:false};
-(()=>{const m=location.hash.match(/nuvem=([^&]+)/);if(m){nuvem.chave=decodeURIComponent(m[1]).trim();LS.set('m3-nuvem-chave',nuvem.chave);history.replaceState(null,'',location.pathname+location.search)}})();
-function nuvemAtiva(){return !!(NUVEM_URL&&nuvem.chave)}
+try{localStorage.removeItem('m3-nuvem-chave')}catch(e){}
+if(/nuvem=/.test(location.hash))history.replaceState(null,'',location.pathname+location.search);
+sessao=LS.get('m3-sessao',null);
+const nuvem={ultima:'',erro:'',ocupado:false,denovo:false};
 const tsP=p=>p.atualizadoEm||p.criadoEm||'';
+const eAdmin=()=>!!(sessao&&sessao.usuario&&sessao.usuario.perfil==='admin');
+async function api(acao,extra){
+  const r=await fetch(NUVEM_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({acao,token:sessao?sessao.token:'',...extra})});
+  const j=await r.json();
+  if(!j.ok&&j.erro==='sessao'&&acao!=='login')encerraSessao('Sua sessão terminou. Entre de novo.');
+  return j;
+}
+function mostraSessao(){
+  const ok=!!sessao;
+  $('login').hidden=ok;
+  $('user-nome').textContent=ok?sessao.usuario.nome:'';
+  $('tab-precos').hidden=!eAdmin();
+  if(!eAdmin()&&$('tab-precos').getAttribute('aria-selected')==='true')$('tab-orc').click();
+  if(ok&&!st.editId)$('vendedor').value=sessao.usuario.nome;
+  if(!ok)setTimeout(()=>$('login-usuario').focus(),0);
+}
+function atualizaUsuario(u,token){
+  if(!sessao||!u)return;
+  sessao={token:token||sessao.token,usuario:u};LS.set('m3-sessao',sessao);mostraSessao();
+}
+function encerraSessao(msg){
+  sessao=null;try{localStorage.removeItem('m3-sessao')}catch(e){}
+  $('msg-login').textContent=msg||'';mostraSessao();
+}
+$('form-login').onsubmit=async e=>{
+  e.preventDefault();
+  const usuario=$('login-usuario').value.trim().toLowerCase(), senha=$('login-senha').value, m=$('msg-login'), b=$('btn-login');
+  if(!usuario||!senha){m.textContent='Digite o usuário e a senha.';return}
+  m.textContent='Entrando…';b.disabled=true;
+  try{
+    const j=await api('login',{usuario,senha});
+    if(!j.ok){m.textContent=j.erro==='login'?'Usuário ou senha incorretos.':'Não foi possível entrar agora ('+(j.erro||'erro')+').';return}
+    // aparelho usado por outra pessoa antes: some com as propostas dela que já estão na nuvem
+    if(LS.get('m3-propostas-dono','')!==j.usuario.usuario){propostas=propostas.filter(p=>!p.sync);LS.set('m3-propostas',propostas)}
+    LS.set('m3-propostas-dono',j.usuario.usuario);
+    sessao={token:j.token,usuario:j.usuario};LS.set('m3-sessao',sessao);
+    $('login-senha').value='';m.textContent='';mostraSessao();renderHist();carregaPrecos();sincroniza();
+  }catch(x){m.textContent='Sem conexão com a internet. Para entrar, o aparelho precisa estar on-line.'}
+  finally{b.disabled=false}
+};
+$('btn-sair').onclick=async()=>{
+  if(propostas.some(p=>!p.sync))await sincroniza();
+  const pend=propostas.filter(p=>!p.sync).length;
+  if(pend){$('tab-hist').click();$('nuvem-status').textContent=`Ainda tem ${pend} proposta${pend>1?'s':''} que não subiu para a nuvem. Conecte à internet antes de sair, senão ela${pend>1?'s':''} se perde${pend>1?'m':''}.`;return}
+  propostas=[];LS.set('m3-propostas',[]);try{localStorage.removeItem('m3-propostas-dono')}catch(e){}
+  renderHist();$('btn-novo').click();$('tab-orc').click();encerraSessao('Você saiu.');
+};
 function mostraNuvem(){
-  const s=$('nuvem-status'), b=$('btn-sync'), cb=$('nuvem-chave-box');
-  if(!NUVEM_URL){b.hidden=true;cb.hidden=true;return}
+  const s=$('nuvem-status'), b=$('btn-sync');
+  b.hidden=!sessao;
+  if(!sessao){s.textContent='Entre com seu usuário para ver suas propostas.';return}
   const pend=propostas.filter(p=>!p.sync).length;
   const txtPend=pend?` ${pend} proposta${pend>1?'s':''} deste aparelho ainda não subiu.`:'';
-  cb.hidden=!!nuvem.chave&&nuvem.erro!=='chave';
-  b.hidden=!nuvem.chave;
-  if(!nuvem.chave){s.textContent='Para ver as propostas de toda a equipe, digite a chave da equipe. Até lá, elas ficam só neste aparelho.';return}
-  if(nuvem.ocupado){s.textContent='Atualizando com a nuvem da equipe…';return}
-  if(nuvem.erro==='chave'){s.textContent='A chave da equipe não confere. Digite de novo (peça ao Izaac).'+txtPend;return}
+  const quem=eAdmin()?'Você vê as propostas de toda a equipe. ':'Você vê as suas propostas. ';
+  if(nuvem.ocupado){s.textContent='Atualizando com a nuvem…';return}
   if(nuvem.erro){s.textContent='Sem conexão com a nuvem agora. As propostas estão salvas neste aparelho e sobem sozinhas quando a internet voltar.'+txtPend;return}
-  s.textContent=nuvem.ultima?`Nuvem da equipe: atualizado às ${new Date(nuvem.ultima).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}.`+txtPend:'Nuvem da equipe conectada.'+txtPend;
+  s.textContent=quem+(nuvem.ultima?`Atualizado às ${new Date(nuvem.ultima).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}.`:'')+txtPend;
 }
 async function sincroniza(){
-  if(!nuvemAtiva()){mostraNuvem();return}
+  if(!sessao){mostraNuvem();return}
   if(nuvem.ocupado){nuvem.denovo=true;return}
   nuvem.ocupado=true;mostraNuvem();
   try{
     const env=propostas.filter(p=>!p.sync).map(p=>{const {sync,...r}=p;return r});
     if(env.length){
-      const r=await fetch(NUVEM_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({chave:nuvem.chave,propostas:env})});
-      const j=await r.json(); if(!j.ok)throw new Error(j.erro||'erro');
+      const j=await api('salvar',{propostas:env}); if(!j.ok)throw new Error(j.erro||'erro');
       const enviado=new Map(env.map(p=>[p.id,tsP(p)]));
       propostas.forEach(p=>{if(enviado.get(p.id)===tsP(p))p.sync=true});
     }
-    const r=await fetch(NUVEM_URL+'?chave='+encodeURIComponent(nuvem.chave)+'&t='+Date.now());
-    const j=await r.json(); if(!j.ok)throw new Error(j.erro||'erro');
-    const porId=new Map(propostas.map(p=>[p.id,p]));
-    (j.propostas||[]).forEach(n=>{if(!n||!n.id)return;const a=porId.get(n.id);if(!a||a.sync||tsP(n)>tsP(a))porId.set(n.id,{...n,sync:true})});
+    const j=await api('listar'); if(!j.ok)throw new Error(j.erro||'erro');
+    if(j.usuario)atualizaUsuario(j.usuario);
+    // fica o que ainda não subiu + o que a nuvem devolve para este usuário
+    const porId=new Map(propostas.filter(p=>!p.sync).map(p=>[p.id,p]));
+    (j.propostas||[]).forEach(n=>{if(!n||!n.id)return;const a=porId.get(n.id);if(!a||tsP(n)>tsP(a))porId.set(n.id,{...n,sync:true})});
     propostas=[...porId.values()].sort((a,b)=>String(b.criadoEm||'').localeCompare(String(a.criadoEm||'')));
     LS.set('m3-propostas',propostas);
     nuvem.ultima=new Date().toISOString();nuvem.erro='';
-  }catch(e){nuvem.erro=(e&&e.message)==='chave'?'chave':'rede'}
+  }catch(e){nuvem.erro='rede'}
   finally{nuvem.ocupado=false;renderHist();mostraNuvem();if(nuvem.denovo){nuvem.denovo=false;sincroniza()}}
 }
 $('btn-sync').onclick=sincroniza;
-$('btn-chave').onclick=()=>{const v=$('nuvem-chave').value.trim();if(!v)return;nuvem.chave=v;LS.set('m3-nuvem-chave',v);nuvem.erro='';$('nuvem-chave').value='';sincroniza()};
 $('tab-hist').addEventListener('click',sincroniza);
 addEventListener('online',sincroniza);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')sincroniza()});
@@ -533,11 +643,12 @@ $('btn-csv').onclick=()=>{
 };
 function abrir(p){
   $('cli-nome').value=p.cliente||'';$('cli-cpf').value=p.cpf||'';$('cli-end').value=p.endereco||'';$('cli-cid').value=p.cidade||'';
-  if(p.vendedor)$('vendedor').value=p.vendedor;
+  $('vendedor').value=p.vendedor||'';
   $('comp').value=p.comprimento||'';$('q').value=p.vazao!=null?p.vazao:(p.agua?Math.round(p.agua/5)/1000:'');$('diam').value=p.diametro||'';
   $('desnivel').value=p.vazao!=null?(p.desnivel||''):((num(p.desnivel)+num(p.nivelDinamico))||'');
   $('km').value=p.km||'';$('qtd').value=p.qtd||1;st.kit=p.kitId;st.inst=p.instalacao!==false;st.estr=p.estrutura!==false;st.kitm=p.kitMontagem!==false;
-  [['op-inst','inst'],['op-estr','estr'],['op-kit','kitm']].forEach(([id,k])=>$(id).setAttribute('aria-pressed',String(st[k])));
+  st.mods=p.placas!==false;st.desl=p.deslocamento!==false;st.semDim=!!p.semDimensionamento;st.extras=Array.isArray(p.extras)?p.extras.slice():[];
+  st.desconto=p.desconto!=null?num(p.desconto):null;$('mca-aj').value=p.mcaAjustado||'';setTog();
   st.editId=p.id;st.numero=p.numero;st.criadoEm=p.criadoEm;
   $('tab-orc').click();$('msg').textContent='Proposta de '+p.cliente+' aberta. Os preços usados agora são os atuais.';render();window.scrollTo(0,0);
 }
@@ -573,30 +684,76 @@ function lePrecosDaTela(){
   return {atualizadoEm:new Date().toISOString().slice(0,10),config:novo,produtos:prods};
 }
 function aplicaPrecos(j){cfg=j.config||{};produtos=(j.produtos||[]).slice().sort((a,b)=>num(a.ordem)-num(b.ordem));}
-$('btn-salvaprecos').onclick=()=>{const j=lePrecosDaTela();aplicaPrecos(j);LS.set('m3-precos-locais',j);precosLocais=true;mostraStatus();renderPrecos();render();$('msg-precos').textContent='Preços aplicados só neste aparelho. Baixe o precos.json para publicar para todos.'};
-$('btn-exportprecos').onclick=()=>{const j=lePrecosDaTela();baixar('precos.json',JSON.stringify(j,null,1),'application/json');$('msg-precos').textContent='precos.json baixado. Substitua o arquivo no site.'};
-$('btn-voltaprecos').onclick=()=>{try{localStorage.removeItem('m3-precos-locais')}catch(e){}precosLocais=false;$('msg-precos').textContent='Voltando aos preços do site…';carregaPrecos()};
+// ---------- administração (só perfil administrador; a nuvem confere de novo em cada gravação)
+let usuarios=[];
+const ERRO_ADM={sessao:'Sua sessão terminou. Entre de novo.',admin:'Só o administrador pode fazer isso.',usuario:'Usuário só com letras minúsculas, números, ponto ou traço (2 a 30), sem espaço.',curta:'A senha precisa ter pelo menos 4 caracteres.',proprio:'Você não pode tirar o seu próprio acesso de administrador.',precos:'Nenhum kit na lista. Nada foi salvo.'};
+const erroAdm=e=>ERRO_ADM[e]||('Não foi possível salvar ('+(e||'erro')+').');
+function mostraAdmin(){if(!eAdmin())return;renderPrecos();carregaUsuarios()}
+function renderUsuarios(){
+  const tb=$('usu-lista');tb.textContent='';
+  if(!usuarios.length){tb.innerHTML='<tr><td colspan="4" class="note">Nenhum usuário.</td></tr>';return}
+  usuarios.forEach(u=>{const tr=document.createElement('tr');tr.style.cursor='pointer';
+    [u.usuario,u.nome,u.perfil==='admin'?'Administrador':'Vendedor',u.ativo?'Ativo':'Desativado'].forEach(t=>{const td=document.createElement('td');td.textContent=t;tr.appendChild(td)});
+    tr.onclick=()=>{$('usu-usuario').value=u.usuario;$('usu-usuario').readOnly=true;$('usu-nome').value=u.nome;$('usu-perfil').value=u.perfil;$('usu-ativo').value=u.ativo?'sim':'nao';$('usu-senha').value='';$('msg-usu').textContent='Editando '+u.nome+'. Senha em branco mantém a atual.';$('usu-nome').focus()};
+    tb.appendChild(tr)});
+}
+async function carregaUsuarios(){
+  const m=$('msg-usu');
+  try{const j=await api('usuarios');if(j.ok){usuarios=j.usuarios||[];renderUsuarios()}else m.textContent=erroAdm(j.erro)}
+  catch(e){m.textContent='Sem conexão com a nuvem. A lista de usuários aparece quando a internet voltar.'}
+}
+$('btn-usu-limpa').onclick=()=>{['usu-usuario','usu-nome','usu-senha'].forEach(id=>$(id).value='');$('usu-usuario').readOnly=false;$('usu-perfil').value='vendedor';$('usu-ativo').value='sim';$('msg-usu').textContent=''};
+$('btn-usu').onclick=async()=>{
+  const m=$('msg-usu'), usuario=$('usu-usuario').value.trim().toLowerCase(), nome=$('usu-nome').value.trim(), senha=$('usu-senha').value;
+  if(!usuario||!nome){m.textContent='Preencha o usuário e o nome.';return}
+  const existe=usuarios.some(u=>u.usuario===usuario);
+  if(!existe&&!senha){m.textContent='Para um usuário novo, defina uma senha.';return}
+  m.textContent='Salvando…';
+  try{const j=await api('salvarUsuario',{dados:{usuario,nome,perfil:$('usu-perfil').value,ativo:$('usu-ativo').value==='sim',senha}});
+    if(!j.ok){m.textContent=erroAdm(j.erro);return}
+    usuarios=j.usuarios||[];renderUsuarios();if(j.usuario)atualizaUsuario(j.usuario,j.token);
+    $('btn-usu-limpa').click();m.textContent=(existe?'Usuário '+usuario+' atualizado.':'Usuário '+usuario+' criado.')+(senha?' Passe a senha para a pessoa.':'');
+  }catch(e){m.textContent='Sem conexão com a nuvem. Nada foi salvo; tente de novo com internet.'}
+};
+$('btn-salvaprecos').onclick=async()=>{
+  const j=lePrecosDaTela(), m=$('msg-precos');
+  if(!j.produtos.length){m.textContent=ERRO_ADM.precos;return}
+  m.textContent='Salvando para todos…';
+  try{const r=await api('salvarPrecos',{precos:j});
+    if(!r.ok){m.textContent=erroAdm(r.erro);return}
+    j.atualizadoEm=r.atualizadoEm;LS.set('m3-precos-site',j);aplicaPrecos(j);fontePrecos='nuvem da equipe, '+quando(j.atualizadoEm);mostraStatus();renderPrecos();render();
+    m.textContent='Salvo para todos às '+new Date(r.atualizadoEm).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+'.';
+  }catch(e){m.textContent='Sem conexão com a nuvem. Nada foi salvo; tente de novo com internet.'}
+};
+$('btn-exportprecos').onclick=()=>{const j=lePrecosDaTela();baixar('precos.json',JSON.stringify(j,null,1),'application/json');$('msg-precos').textContent='Cópia baixada.'};
 
 // ---------- preços: arquivo precos.json do site (com cópia para usar sem internet)
 let fontePrecos='';
+const quando=t=>{if(!t)return 'cópia salva';const d=new Date(t);return isNaN(d)||String(t).length<=10?String(t):d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})};
 function mostraStatus(){
   const st_=$('status');
   if(!produtos.length){st_.className='banner warn';st_.textContent='Não foi possível carregar os preços. Abra o app uma vez com internet.';return}
-  st_.className=precosLocais?'banner warn':'banner';
-  st_.textContent=(precosLocais?'Atenção: usando preços editados só neste aparelho. ':'')+`${produtos.length} kits carregados (${fontePrecos}). Exemplo já preenchido: troque pelos dados do cliente ou clique em Novo orçamento.`;
+  st_.className='banner';
+  st_.textContent=`${produtos.length} kits carregados (${fontePrecos}). Exemplo já preenchido: troque pelos dados do cliente ou clique em Novo orçamento.`;
 }
 async function carregaPrecos(){
-  const locais=LS.get('m3-precos-locais',null);
-  let j=null;
-  try{const r=await fetch('precos.json',{cache:'no-cache'});if(r.ok){j=await r.json();LS.set('m3-precos-site',j);fontePrecos='preços de '+(j.atualizadoEm||'hoje')}}catch(e){}
-  if(!j){j=LS.get('m3-precos-site',null);if(j)fontePrecos='sem internet, preços de '+(j.atualizadoEm||'cópia salva')}
-  if(locais){aplicaPrecos(locais);precosLocais=true;fontePrecos='editados neste aparelho'}
-  else if(j){aplicaPrecos(j);precosLocais=false}
+  // preços editados só no aparelho (versão antiga) deixam de valer: o que vale é o do site ou o da nuvem
+  try{localStorage.removeItem('m3-precos-locais')}catch(e){}
+  let site=null, nv=null;
+  try{const r=await fetch('precos.json',{cache:'no-cache'});if(r.ok)site=await r.json()}catch(e){}
+  if(sessao){try{const k=await api('precos');if(k.ok&&k.precos&&k.precos.produtos)nv=k.precos}catch(e){}}
+  // vale o mais recente entre o arquivo do site e o salvo pelo administrador na nuvem
+  let j=site, fonte=site?'preços de '+quando(site.atualizadoEm):'';
+  if(nv&&(!site||String(nv.atualizadoEm||'')>=String(site.atualizadoEm||''))){j=nv;fonte='nuvem da equipe, '+quando(nv.atualizadoEm)}
+  if(j){LS.set('m3-precos-site',j);fontePrecos=fonte}
+  else{j=LS.get('m3-precos-site',null);if(j)fontePrecos='sem internet, preços de '+quando(j.atualizadoEm)}
+  if(j)aplicaPrecos(j);
   mostraStatus();renderPrecos();render();renderHist();
 }
-const abrePrecos=()=>{const show=location.hash==='#precos';$('tab-precos').hidden=!show;if(show)$('tab-precos').click()};
+$('tab-precos').addEventListener('click',mostraAdmin);
+const abrePrecos=()=>{if(location.hash==='#precos'&&eAdmin())$('tab-precos').click()};
 addEventListener('hashchange',abrePrecos);
-render();carregaCurvas();carregaPrecos().then(abrePrecos);mostraNuvem();sincroniza();
+mostraSessao();render();carregaCurvas();carregaPrecos().then(abrePrecos);mostraNuvem();sincroniza();
 addEventListener('online',carregaPrecos);
 })();
 </script>

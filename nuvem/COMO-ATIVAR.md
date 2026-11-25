@@ -1,51 +1,33 @@
-# Como ativar a nuvem da equipe (uma vez só, uns 10 minutos)
+# Nuvem da equipe com login
 
-A nuvem é uma planilha Google na conta do Izaac. O app manda para ela cada proposta salva e
-puxa as propostas de todos. Sem internet, o app continua salvando no aparelho e envia depois.
-É grátis.
+A nuvem é a planilha Google **Propostas M3 Bombas** (conta da M3). O app manda para ela cada proposta
+salva, lê os preços e confere o login. Sem internet, o app continua salvando no aparelho e envia depois.
 
-## 1. Criar a planilha
-1. No computador, abra https://sheets.google.com com a conta da M3 (a que vai ser dona dos dados).
-2. Clique em **Em branco** e dê o nome **Propostas M3 Bombas**.
+## Como funciona o acesso
+- Cada pessoa entra com **usuário e senha** (tela de login ao abrir o app). Não existe mais senha no link.
+- **Vendedor** vê só as propostas dele. **Administrador** vê as de todos e tem a aba **Administração**
+  (usuários, valores fixos e kits), que salva para a equipe toda.
+- As propostas antigas (de antes do login) ficam com quem aparece como vendedor nelas.
+- O aparelho fica logado (até 1 ano). Ao trocar a senha ou desativar alguém, o acesso dessa pessoa cai na hora.
+- Ao tocar em **Sair**, o aparelho apaga a cópia local das propostas (elas continuam na nuvem).
+  Se alguma ainda não subiu, o app não deixa sair até a internet voltar.
 
-## 2. Colar o código
-1. Na planilha, menu **Extensões > Apps Script**. Abre uma aba nova com um arquivo `Código.gs`.
-2. Apague tudo o que estiver lá e cole o conteúdo do arquivo `nuvem/Codigo.gs` deste repositório.
-3. Na linha `const CHAVE = 'TROQUE-ESTA-CHAVE';`, troque `TROQUE-ESTA-CHAVE` por uma senha da equipe,
-   só com letras e números, sem espaço (exemplo: `bombasM3x2026`). Guarde essa senha.
-4. Clique no disquete (**Salvar projeto**).
+## Atualizar o código da nuvem (quando o app mudar)
+1. Abra o projeto do Apps Script da planilha (Extensões > Apps Script, ou script.google.com).
+2. Apague tudo em `Código.gs` e cole o conteúdo de `nuvem/Codigo.gs` deste repositório.
+3. Salve e publique como **Implantar > Gerenciar implantações > lápis > Versão: Nova versão > Implantar**.
+   O endereço (`/exec`) continua o mesmo.
 
-## 3. Publicar (implantar)
-1. Botão azul **Implantar > Nova implantação**.
-2. Na engrenagem ao lado de "Selecione o tipo", escolha **App da Web**.
-3. Preencha:
-   - **Executar como:** Eu (sua conta)
-   - **Quem pode acessar:** Qualquer pessoa
-4. Clique em **Implantar**. O Google pede autorização: **Autorizar acesso**, escolha a sua conta.
-   Se aparecer "O Google não verificou este app", clique em **Avançado** e depois em
-   **Acessar Propostas M3 Bombas (não seguro)**. É normal: o app é seu e só mexe nesta planilha.
-5. Copie o **URL do app da Web** (termina em `/exec`) e mande para o Claude no projeto.
-   O Claude coloca esse endereço no app e publica.
-
-"Qualquer pessoa" só quer dizer que o app consegue falar com a planilha sem login do Google.
-Sem a senha da equipe, ninguém lê nem grava nada.
-
-## 4. Ligar cada aparelho
-Depois que o Claude avisar que publicou, mande para cada vendedor este link (troque SENHA pela sua):
-
-    https://izaacmartinsc-ops.github.io/orcamento-m3/#nuvem=SENHA
-
-Ao abrir uma vez, o aparelho guarda a senha e o link fica limpo. Também dá para digitar a senha
-na aba **Propostas salvas**, no campo "Chave da equipe".
-
-As propostas que cada aparelho já tinha sobem sozinhas na primeira vez.
+## Primeiro acesso
+1. Logo depois de publicar, abra o app e entre com usuário **izaac** e a senha que você quiser (mínimo
+   4 caracteres). Enquanto a aba **Usuarios** estiver vazia, esse primeiro login cria você como
+   administrador com essa senha. Depois disso, só entra quem estiver na aba.
+2. Em **Administração > Usuários**, crie os vendedores (usuário, nome que sai no PDF, senha) e passe a
+   senha para cada um.
 
 ## Bom saber
-- A planilha mostra uma linha por proposta (número, data, vendedor, cliente, kit, total). A última
-  coluna (`json`) é a proposta completa: não edite nem apague essa coluna.
+- Na planilha, a coluna `json` da aba Propostas é a proposta completa: não edite nem apague.
+- A aba **Usuarios** guarda só um código da senha (não a senha). Não edite à mão.
+- A aba **Config** guarda os preços salvos pela Administração. Vale o mais recente entre ela e o
+  arquivo `precos.json` do site.
 - Se alguém editar a mesma proposta em dois aparelhos, fica a versão salva por último.
-- Para trocar a senha: mude a linha `CHAVE` no Apps Script, salve e faça
-  **Implantar > Gerenciar implantações > lápis > Versão: Nova versão > Implantar**.
-  Depois mande o link novo para a equipe.
-- Se mudar o código do Apps Script, sempre publique como **Nova versão** (passo acima),
-  senão o endereço continua rodando o código antigo.
