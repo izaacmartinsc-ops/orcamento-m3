@@ -2,10 +2,9 @@
 // Fica em Extensões > Apps Script da planilha "Propostas M3 Bombas".
 // Depois de mudar este código: Implantar > Gerenciar implantações > lápis > Versão: Nova versão > Implantar.
 
-// Senha do PRIMEIRO acesso do administrador. Só vale enquanto a aba Usuarios estiver vazia:
-// o usuário "izaac" entra com esta senha e vira administrador. Depois, troque a senha pelo app.
+// PRIMEIRO acesso: enquanto a aba Usuarios estiver vazia, o usuário "izaac" entra com a senha que
+// digitar (mínimo 4 caracteres) e vira administrador com essa senha. Depois disso, só valem os usuários da aba.
 const ADMIN_USUARIO = 'izaac';
-const ADMIN_SENHA_INICIAL = 'TROQUE-ESTA-SENHA';
 
 const ABA = 'Propostas';
 const COLS = ['id', 'numero', 'criadoEm', 'atualizadoEm', 'vendedor', 'cliente', 'cidade', 'tipo',
@@ -143,7 +142,7 @@ function acao_(c) {
     const usuario = String(c.usuario || '').trim().toLowerCase();
     const senha = String(c.senha || '');
     let todos = lerUsuarios_();
-    if (!todos.length && usuario === ADMIN_USUARIO && senha === ADMIN_SENHA_INICIAL && ADMIN_SENHA_INICIAL !== 'TROQUE-ESTA-SENHA') {
+    if (!todos.length && usuario === ADMIN_USUARIO && senha.length >= 4) {
       const sal = Utilities.getUuid();
       gravarUsuario_({ usuario: usuario, nome: 'Izaac', perfil: 'admin', ativo: true, sal: sal, hash: hashSenha_(sal, senha), versao: '1', criadoEm: new Date().toISOString() });
       todos = lerUsuarios_();
