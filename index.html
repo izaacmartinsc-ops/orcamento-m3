@@ -357,9 +357,13 @@ function valores(r){
   const c=cfg||{}; const p=produtos.find(x=>x.id===st.kit); if(!p)return null;
   const qtd=Math.max(1,Math.round(num($('qtd').value))||1);
   const pl=$('n-placas').value.trim(); const mods=pl===''?num(p.modulos)*qtd:Math.max(0,Math.round(num(pl)));
+  // nome do kit acompanha a quantidade de placas digitada (ex.: "5 PLACAS" vira "6 PLACAS")
+  let nome=p.nome;
+  if(pl!==''&&mods!==num(p.modulos)*qtd){const pk=mods/qtd, re=/\d+\s*PLACAS?\b/i;
+    nome=Number.isInteger(pk)&&re.test(nome)?nome.replace(re,pk+(pk===1?' PLACA':' PLACAS')):nome+' ('+mods+(mods===1?' placa':' placas')+')'}
   const unit=num(p.preco)+num(c.adicionalBomba);
   const itens=[
-    {n:p.nome,q:qtd,u:unit,s:num(p.preco)*qtd+num(c.adicionalBomba),produto:true},
+    {n:nome,q:qtd,u:unit,s:num(p.preco)*qtd+num(c.adicionalBomba),produto:true},
     {n:'Módulos 550W',q:st.mods?mods:0,u:num(c.modulo)},
     {n:'Estrutura por módulo',q:st.estr?mods:0,u:num(c.estrutura)},
     {n:'Kit inst. bomba superfície',q:(st.kitm&&p.tipo==='SUPERFÍCIE')?1:0,u:num(c.kitSup)},
@@ -372,7 +376,7 @@ function valores(r){
   const total=itens.reduce((a,i)=>a+i.s,0);
   const desc=descontoPct();
   const vista=total*(1-desc/100);
-  return {p,qtd,mods,itens,total,vista,desc};
+  return {p,nome,qtd,mods,itens,total,vista,desc};
 }
 
 // ---------- render
@@ -413,7 +417,7 @@ function render(){
   if(v){
     v.itens.filter(i=>i.q>0||i.produto).forEach(i=>{const tr=document.createElement('tr');tr.innerHTML=`<td></td><td class="r">${fmt(i.q)}</td><td class="r">${brl(i.u)}</td><td class="r">${brl(i.s)}</td>`;tr.firstChild.textContent=i.n;tb.appendChild(tr)});
     $('t-4x').textContent=brl(v.total);$('t-vista').textContent=brl(v.vista)+(v.desc?' ('+fmt(v.desc,1).replace(',0','')+'%)':'');
-    $('bar-total').textContent=brl(v.total);$('bar-kit').textContent=v.p.nome;
+    $('bar-total').textContent=brl(v.total);$('bar-kit').textContent=v.nome;
   }else{
     tb.innerHTML='<tr><td colspan="4" class="note">Escolha um kit na parte 4.</td></tr>';
     $('t-4x').textContent='–';$('t-vista').textContent='–';$('bar-total').textContent='R$ 0,00';$('bar-kit').textContent='Nenhum kit escolhido';
@@ -452,7 +456,7 @@ function dadosProposta(){
   return {cliente:$('cli-nome').value.trim(),cpf:$('cli-cpf').value.trim(),endereco:$('cli-end').value.trim(),cidade:$('cli-cid').value.trim(),
     vendedor:$('vendedor').value,tipo:tipoKit(),comprimento:r.L,vazao:r.Q,diametro:r.D,desnivel:r.dn,km:num($('km').value),
     amt:Math.round(r.amt*100)/100,mcaAjustado:r.ajustado?num($('mca-aj').value):null,semDimensionamento:st.semDim,
-    kitId:st.kit,kitNome:v?v.p.nome:'',qtd:v?v.qtd:1,instalacao:st.inst,estrutura:st.estr,kitMontagem:st.kitm,placas:st.mods,qtdPlacas:v?v.mods:null,placasAjustadas:$('n-placas').value.trim()!=='',deslocamento:st.desl,
+    kitId:st.kit,kitNome:v?v.nome:'',qtd:v?v.qtd:1,instalacao:st.inst,estrutura:st.estr,kitMontagem:st.kitm,placas:st.mods,qtdPlacas:v?v.mods:null,placasAjustadas:$('n-placas').value.trim()!=='',deslocamento:st.desl,
     extras:st.extras.slice(),desconto:v?v.desc:descontoPct(),
     total:v?Math.round(v.total*100)/100:0,vista:v?Math.round(v.vista*100)/100:0};
 }
@@ -498,7 +502,7 @@ async function gerarPDF(){
   lab('ENDEREÇO:',M,y);val(d.endereco,M+30,y);lab('Cidade/Estado:',140,y);val(d.cidade,166,y);y+=6;
   const faixa=(t)=>{doc.setFillColor(242,183,5);doc.rect(M,y-4,W-2*M,6,'F');doc.setTextColor(0);lab(t,M+2,y);y+=6};
   faixa('Produto');
-  lab('Produto:',M,y);val(v.p.nome,M+30,y);lab('Quantidade:',140,y);val(v.qtd,163,y);y+=5;
+  lab('Produto:',M,y);val(v.nome,M+30,y);lab('Quantidade:',140,y);val(v.qtd,163,y);y+=5;
   lab('INSTALAÇÃO',M,y);val(st.inst?'SIM':'NÃO',M+40,y);y+=5;
   lab('ESTRUTURAL',M,y);val(st.estr?'SIM':'NÃO',M+40,y);y+=5;
   lab('KIT DE MONTAGEM',M,y);val(st.kitm?'SIM':'NÃO',M+40,y);val(v.p.tipo,M+60,y);y+=5;
